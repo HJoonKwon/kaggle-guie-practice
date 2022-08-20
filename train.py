@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import os
 from torch.backends import cudnn
-
+from evaluate import eval_one_epoch
 
 def set_seed(seed=42):
     '''Sets the seed of the entire notebook so results are the same every time we run.
@@ -16,22 +16,20 @@ def set_seed(seed=42):
     # Set a fixed value for the hash seed
     os.environ['PYTHONHASHSEED'] = str(seed)
 
+
 def get_scheduler():
     pass
 
+
 def get_optimizer():
     pass
+
 
 def get_dataloaders():
     pass
 
 
 def train_one_epoch():
-    pass
-
-
-@torch.inference_mode()
-def valid_one_epoch():
     pass
 
 
