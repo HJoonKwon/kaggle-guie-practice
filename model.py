@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 import timm
-
+from config import Config
 
 class GEM(nn.Module):
     """reference: https://amaarora.github.io/2020/08/30/gempool.html"""
@@ -105,11 +105,30 @@ class ArcMarginProductSubcenter(nn.Module):
 
 
 class GUIEModel(nn.Module):
-    def __init__(self):
-        pass
+    def __init__(self, model_name, embedding_size=64, target_size=[224, 224]):
+        super(GUIEModel, self).__init__()
+        self.target_size = target_size
+        self.backbone = timm.create_model(model_name, pretrained=True, num_classes=0)
+        #TODO:: maybe using features_only=True option seems better
+        self.pooling = GEM()
+        in_features = self.model.classifier.in_features
+        self.embedding = nn.Linear(in_features, embedding_size)
+        self.fc = ArcMarginProduct(embedding_size,
+                                   num_classes=Config["num_classes"],
+                                   s=Config["s"],
+                                   m=Config["m"],
+                                   easy_margin=Config["easy_margin"],
+                                   ls_eps=Config["ls_eps"])
 
-    def forward(self):
-        pass
+    def forward(self, images, labels):
+        features = self.backbone(images)
+        pooled_features = self.pooling(features).flatten(1) # flatten dim>=1 part
+        embedding = self.embedding(pooled_features)
+        output = self.fc(embedding, labels)
+        return output
 
-    def extract(self):
-        pass
+    def extract(self, images):
+        features = self.backbone(images)
+        pooled_features = self.pooling(features).flatten(1)
+        embedding = self.embedding(pooled_features)
+        return embedding
