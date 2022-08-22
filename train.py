@@ -1,11 +1,15 @@
+from audioop import cross
 import torch
 import numpy as np
 import os
+from tqdm.auto import tqdm
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from evaluate import eval_one_epoch
 from config import Config
+from loss import cross_entropy_loss
+import gc
 
 ##TODO:: implement DDP for multi-gpu training
 
@@ -52,9 +56,38 @@ def get_dataloaders(df, fold, dataset, alb_transforms):
                               num_workers=2, shuffle=False, pin_memory=True)
     return train_loader, valid_loader
 
-def train_one_epoch():
-    pass
+def train_one_epoch(model, optimizer, scheduler, dataloader, device, epoch):
+    model.train()
 
+    dataset_size = 0
+    running_loss = 0.0
+    bar = tqdm(enumerate(dataloader), total=len(dataloader))
+    for step, data in bar:
+        images = data["image"].to(device, dtype=torch.float)
+        labels = data["label"].to(device, dtype=torch.long)
+
+        batch_size = images.size(0)
+        outputs = model(images, labels)
+        loss = cross_entropy_loss(outputs, labels)
+        loss = loss / Config["n_accumulate"]
+
+        if (step + 1) % Config["n_accumulate"] == 0:
+            optimizer.step()
+            optimizer.zero_grad()
+
+            if scheduler is not None:
+                scheduler.step()
+
+        running_loss += (loss.item() * batch_size)
+        dataset_size += batch_size
+
+        epoch_loss = running_loss / dataset_size
+
+        bar.set_postfix(Epoch=epoch, Train_Loss=epoch_loss,
+                        LR=optimizer.param_groups[0]['lr'])
+
+    gc.collect()
+    return epoch_loss
 
 def run():
     pass
