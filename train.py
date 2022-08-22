@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import os
 from torch.backends import cudnn
+from torch.utils.data import DataLoader
 import torch.optim as optim
 from evaluate import eval_one_epoch
 from config import Config
@@ -40,9 +41,16 @@ def get_scheduler(optimizer):
     return scheduler
 
 
-def get_dataloaders():
-    pass
-
+def get_dataloaders(df, fold, dataset, alb_transforms):
+    df_train = df[df.kfold != fold].reset_index(drop=True)
+    df_valid = df[df.kfold == fold].reset_index(drop=True)
+    train_dataset = dataset(df_train, transforms=alb_transforms["train"])
+    valid_dataset = dataset(df_valid, transforms=alb_transforms["valid"])
+    train_loader = DataLoader(train_dataset, batch_size=Config['train_batch_size'],
+                              num_workers=2, shuffle=True, pin_memory=True, drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=Config['valid_batch_size'],
+                              num_workers=2, shuffle=False, pin_memory=True)
+    return train_loader, valid_loader
 
 def train_one_epoch():
     pass
