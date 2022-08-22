@@ -2,7 +2,11 @@ import torch
 import numpy as np
 import os
 from torch.backends import cudnn
+import torch.optim as optim
 from evaluate import eval_one_epoch
+from config import Config
+
+##TODO:: implement DDP for multi-gpu training
 
 def set_seed(seed=42):
     '''Sets the seed of the entire notebook so results are the same every time we run.
@@ -17,12 +21,23 @@ def set_seed(seed=42):
     os.environ['PYTHONHASHSEED'] = str(seed)
 
 
-def get_scheduler():
-    pass
+def get_optimizer(model):
+    optimizer = optim.Adam(model.parameters(), lr=Config['learning_rate'],
+                       weight_decay=Config['weight_decay'])
+    return optimizer
 
 
-def get_optimizer():
-    pass
+def get_scheduler(optimizer):
+    if Config['scheduler'] == 'CosineAnnealingLR':
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer,T_max=Config['T_max'],
+                                                   eta_min=Config['min_lr'])
+    elif Config['scheduler'] == 'CosineAnnealingWarmRestarts':
+        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=Config['T_0'],
+                                                             eta_min=Config['min_lr'])
+    elif Config['scheduler'] == None:
+        return None
+
+    return scheduler
 
 
 def get_dataloaders():
