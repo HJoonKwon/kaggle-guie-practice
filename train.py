@@ -112,6 +112,10 @@ def eval_one_epoch(model, optimizer, dataloader, device, epoch):
         bar.set_postfix(Epoch=epoch, Valid_loss=epoch_loss,
                         LR=optimizer.param_groups[0]['lr'])
 
+        # Empty CUDA cache
+        if device != torch.device('cpu'):
+            torch.cuda.empty_cache()
+
         return epoch_loss
 
 
