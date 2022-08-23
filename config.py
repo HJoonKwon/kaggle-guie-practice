@@ -60,6 +60,10 @@ class ConfigType:
     model_name = "swin_large_patch4_window12_384_in22k" #"convnext"
     img_size = sizes[model_name]
 
+    data_dir = '.'
+    fold = 1
+    ckpt_dir = '.'
+
     # ArcFace Hyperparameters
     s = 30.0
     m =0.50

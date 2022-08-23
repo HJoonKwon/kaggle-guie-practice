@@ -6,11 +6,17 @@ from tqdm.auto import tqdm
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
 import torch.optim as optim
+import time
+import copy
+from collections import defaultdict
+import pandas as pd
 from config import Config
+from dataset import GUIEDataset, alb_transforms
 from loss import cross_entropy_loss
-import gc
+from model import GUIEModel
 
 ##TODO:: implement DDP for multi-gpu training
+
 
 def set_seed(seed=42):
     '''Sets the seed of the entire notebook so results are the same every time we run.
@@ -26,18 +32,32 @@ def set_seed(seed=42):
 
 
 def get_optimizer(model):
-    optimizer = optim.Adam(model.parameters(), lr=Config['learning_rate'],
-                       weight_decay=Config['weight_decay'])
+    optimizer = optim.Adam(model.parameters(),
+                           lr=Config['learning_rate'],
+                           weight_decay=Config['weight_decay'])
     return optimizer
+
+
+def create_folds(df):
+    #TODO:: create fold implementation
+    return df
+
+
+def generate_df(data_dir):
+    df = pd.read_csv(os.path.join(data_dir, 'train.csv'),
+                     low_memory=False,
+                     squeeze=True)
+    df = create_folds(df)
+    return df
 
 
 def get_scheduler(optimizer):
     if Config['scheduler'] == 'CosineAnnealingLR':
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer,T_max=Config['T_max'],
-                                                   eta_min=Config['min_lr'])
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=Config['T_max'], eta_min=Config['min_lr'])
     elif Config['scheduler'] == 'CosineAnnealingWarmRestarts':
-        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=Config['T_0'],
-                                                             eta_min=Config['min_lr'])
+        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, T_0=Config['T_0'], eta_min=Config['min_lr'])
     elif Config['scheduler'] == None:
         return None
 
@@ -49,11 +69,19 @@ def get_dataloaders(df, fold, dataset, alb_transforms):
     df_valid = df[df.kfold == fold].reset_index(drop=True)
     train_dataset = dataset(df_train, transforms=alb_transforms["train"])
     valid_dataset = dataset(df_valid, transforms=alb_transforms["valid"])
-    train_loader = DataLoader(train_dataset, batch_size=Config['train_batch_size'],
-                              num_workers=2, shuffle=True, pin_memory=True, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=Config['valid_batch_size'],
-                              num_workers=2, shuffle=False, pin_memory=True)
+    train_loader = DataLoader(train_dataset,
+                              batch_size=Config['train_batch_size'],
+                              num_workers=2,
+                              shuffle=True,
+                              pin_memory=True,
+                              drop_last=True)
+    valid_loader = DataLoader(valid_dataset,
+                              batch_size=Config['valid_batch_size'],
+                              num_workers=2,
+                              shuffle=False,
+                              pin_memory=True)
     return train_loader, valid_loader
+
 
 def train_one_epoch(model, optimizer, scheduler, dataloader, device, epoch):
     model.train()
@@ -82,10 +110,12 @@ def train_one_epoch(model, optimizer, scheduler, dataloader, device, epoch):
 
         epoch_loss = running_loss / dataset_size
 
-        bar.set_postfix(Epoch=epoch, Train_Loss=epoch_loss,
+        bar.set_postfix(Epoch=epoch,
+                        Train_Loss=epoch_loss,
                         LR=optimizer.param_groups[0]['lr'])
 
     return epoch_loss
+
 
 @torch.inference_mode()
 def eval_one_epoch(model, optimizer, dataloader, device, epoch):
@@ -109,7 +139,8 @@ def eval_one_epoch(model, optimizer, dataloader, device, epoch):
 
         epoch_loss = running_loss / dataset_size
 
-        bar.set_postfix(Epoch=epoch, Valid_loss=epoch_loss,
+        bar.set_postfix(Epoch=epoch,
+                        Valid_loss=epoch_loss,
                         LR=optimizer.param_groups[0]['lr'])
 
         # Empty CUDA cache
@@ -119,9 +150,53 @@ def eval_one_epoch(model, optimizer, dataloader, device, epoch):
         return epoch_loss
 
 
-def run():
-    pass
+def run(model: torch.nn.Module, optimizer: torch.optim.optimizer,
+        scheduler: torch.optim.lr_scheduler, device: torch.device,
+        num_epochs: int):
+    start = time.time()
+    best_model_wts = copy.deepcopy(model.state_dict())
+    best_epoch_loss = np.inf
+    history = defaultdict(list)
 
+    df = generate_df(Config["data_dir"])
+    train_loader, valid_loader = get_dataloaders(df, Config["fold"],
+                                                 GUIEDataset, alb_transforms)
+
+    for epoch in range(1, num_epochs + 1):
+        train_epoch_loss = train_one_epoch(model, optimizer, scheduler,
+                                           train_loader, device, epoch)
+        val_epoch_loss = eval_one_epoch(model,
+                                        valid_loader,
+                                        device=device,
+                                        epoch=epoch)
+        history['Train Loss'].append(train_epoch_loss)
+        history['Valid Loss'].append(val_epoch_loss)
+
+        # deep copy the model
+        if val_epoch_loss <= best_epoch_loss:
+            print(f"{b_}Validation Loss Improved ({best_epoch_loss} ---> {val_epoch_loss})")
+            best_epoch_loss = val_epoch_loss
+            best_model_wts = copy.deepcopy(model.state_dict())
+            PATH = os.path.join(Config['ckpr_dir'],f"Loss{best_epoch_loss:.4f}_epoch{epoch:.0f}.bin")
+            torch.save(model.state_dict(), PATH)
+            print(f"Model Saved{sr_}")
+        print()
+
+    end = time.time()
+    time_elapsed = end - start
+    print('Training complete in {:.0f}h {:.0f}m {:.0f}s'.format(
+        time_elapsed // 3600, (time_elapsed % 3600) // 60, (time_elapsed % 3600) % 60))
+    print(f"Best Loss: {best_epoch_loss:.4f}")
+
+    # load best model weights
+    model.load_state_dict(best_model_wts)
+
+    return model, history
 
 if __name__ == "__main__":
-    run()
+    model = GUIEModel(Config["model_name"], embedding_size=64, target_size=[224, 224])
+    optimizer = get_optimizer(model)
+    scheduler = get_scheduler(optimizer)
+    device = Config["device"]
+    num_epochs = Config["num_epochs"]
+    model, history = run(model, optimizer, scheduler, device, num_epochs)
