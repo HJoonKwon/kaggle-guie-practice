@@ -15,11 +15,16 @@ device = torch.device("cuda")
 # print(y.shape)
 
 # arcface
-emb_dim = 64
-num_class = 2000
-arcface = ArcMarginProduct(emb_dim, num_class).to(device, dtype=torch.float)
-features = torch.rand(5, emb_dim).to(device)
-labels = torch.rand(5).to(device, dtype=torch.long)
-print(features.shape)
-output = arcface(features, labels)
-print(output.shape)
+# emb_dim = 64
+# num_class = 2000
+# arcface = ArcMarginProduct(emb_dim, num_class).to(device, dtype=torch.float)
+# features = torch.rand(5, emb_dim).to(device)
+# labels = torch.rand(5).to(device, dtype=torch.long)
+# print(features.shape)
+# output = arcface(features, labels)
+# print(output.shape)
+
+# dataset (huggingface)
+# from datasets import load_dataset
+# dataset = load_dataset("imagenet-1k", use_auth_token=True)
+# print(dataset)
