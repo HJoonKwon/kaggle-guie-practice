@@ -3,6 +3,7 @@ from torch.utils.data import Dataset
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import cv2
+import numpy as np
 from config import Config
 
 class GUIEDataset(Dataset):
@@ -26,7 +27,7 @@ class GUIEDataset(Dataset):
 
         return {
             "image": img,
-            "label": torch.Tensor(label, torch.long)
+            "label": torch.from_numpy(np.array(label))
         }
 
 
