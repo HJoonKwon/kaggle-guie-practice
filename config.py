@@ -41,7 +41,7 @@ sizes = {
 
 }
 
-class Config:
+class ConfigType:
     learning_rate = 1e-4
     scheduler = "CosineAnnealingLR"
     min_lr = 1e-6
@@ -66,3 +66,8 @@ class Config:
     ls_eps = 0.0
     easy_margin = False
 
+    def __getitem__(self, key):
+        return getattr(self, key, None)
+
+
+Config = ConfigType()
