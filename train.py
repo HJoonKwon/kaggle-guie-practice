@@ -11,6 +11,7 @@ import copy
 from collections import defaultdict
 import pandas as pd
 from config import Config
+from sklearn.model_selection import StratifiedKFold
 from dataset import GUIEDataset, alb_transforms
 from loss import cross_entropy_loss
 from model import GUIEModel
@@ -39,7 +40,14 @@ def get_optimizer(model):
 
 
 def create_folds(df):
-    #TODO:: create fold implementation
+    skf_kwargs = {'X':df, 'y':df['label_id']}
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=2022)
+    df['kfold'] = -1
+    for fold_id, (train_idx, valid_idx) in enumerate(skf.split(**skf_kwargs)):
+        df.loc[valid_idx, "kfold"] = fold_id
+
+    # classes = sorted(df['label_id'].unique())
+    # label_mapping = dict(zip(classes, list(range(len(classes)))))
     return df
 
 
