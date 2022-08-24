@@ -60,7 +60,7 @@ class ConfigType:
     model_name = "swin_large_patch4_window12_384_in22k" #"convnext"
     img_size = sizes[model_name]
 
-    data_dir = '.'
+    data_dir = '/media/volume4/130k-512x512-guie'
     fold = 1
     ckpt_dir = '.'
 
