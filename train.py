@@ -19,7 +19,7 @@ from model import GUIEModel
 ##TODO:: implement DDP for multi-gpu training
 
 
-def set_seed(seed=42):
+def set_seed(seed: int = 42) -> None:
     '''Sets the seed of the entire notebook so results are the same every time we run.
     This is for REPRODUCIBILITY.'''
     np.random.seed(seed)
@@ -32,15 +32,15 @@ def set_seed(seed=42):
     os.environ['PYTHONHASHSEED'] = str(seed)
 
 
-def get_optimizer(model):
+def get_optimizer(model: torch.nn.Module) -> torch.optim.optimizer:
     optimizer = optim.Adam(model.parameters(),
                            lr=Config['learning_rate'],
                            weight_decay=Config['weight_decay'])
     return optimizer
 
 
-def create_folds(df):
-    skf_kwargs = {'X':df, 'y':df['label_id']}
+def create_folds(df: pd.DataFrame) -> pd.DataFrame:
+    skf_kwargs = {'X': df, 'y': df['label_id']}
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=2022)
     df['kfold'] = -1
     for fold_id, (train_idx, valid_idx) in enumerate(skf.split(**skf_kwargs)):
@@ -51,7 +51,7 @@ def create_folds(df):
     return df
 
 
-def generate_df(data_dir):
+def generate_df(data_dir: str) -> pd.DataFrame:
     df = pd.read_csv(os.path.join(data_dir, 'train.csv'),
                      low_memory=False,
                      squeeze=True)
@@ -59,7 +59,8 @@ def generate_df(data_dir):
     return df
 
 
-def get_scheduler(optimizer):
+def get_scheduler(
+        optimizer: torch.optim.optimizer) -> torch.optim.lr_scheduler:
     if Config['scheduler'] == 'CosineAnnealingLR':
         scheduler = optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=Config['T_max'], eta_min=Config['min_lr'])
@@ -72,7 +73,8 @@ def get_scheduler(optimizer):
     return scheduler
 
 
-def get_dataloaders(df, fold, dataset, alb_transforms):
+def get_dataloaders(df: pd.DataFrame, fold: int, dataset: GUIEDataset,
+                    alb_transforms: dict):
     df_train = df[df.kfold != fold].reset_index(drop=True)
     df_valid = df[df.kfold == fold].reset_index(drop=True)
     train_dataset = dataset(df_train, transforms=alb_transforms["train"])
@@ -91,7 +93,10 @@ def get_dataloaders(df, fold, dataset, alb_transforms):
     return train_loader, valid_loader
 
 
-def train_one_epoch(model, optimizer, scheduler, dataloader, device, epoch):
+def train_one_epoch(model: torch.nn.Module, optimizer: torch.optim.optimizer,
+                    scheduler: torch.optim.lr_scheduler,
+                    dataloader: DataLoader, device: torch.device,
+                    epoch: int) -> float:
     model.train()
 
     dataset_size = 0
@@ -126,7 +131,8 @@ def train_one_epoch(model, optimizer, scheduler, dataloader, device, epoch):
 
 
 @torch.inference_mode()
-def eval_one_epoch(model, optimizer, dataloader, device, epoch):
+def eval_one_epoch(model: torch.nn.Module, optimizer: torch.optim.optimizer,
+                   dataloader: DataLoader, device: torch.device, epoch: int):
     """ compute loss and prediction score during training"""
     model.eval()
 
@@ -182,10 +188,14 @@ def run(model: torch.nn.Module, optimizer: torch.optim.optimizer,
 
         # deep copy the model
         if val_epoch_loss <= best_epoch_loss:
-            print(f"{b_}Validation Loss Improved ({best_epoch_loss} ---> {val_epoch_loss})")
+            print(
+                f"{b_}Validation Loss Improved ({best_epoch_loss} ---> {val_epoch_loss})"
+            )
             best_epoch_loss = val_epoch_loss
             best_model_wts = copy.deepcopy(model.state_dict())
-            PATH = os.path.join(Config['ckpr_dir'],f"Loss{best_epoch_loss:.4f}_epoch{epoch:.0f}.bin")
+            PATH = os.path.join(
+                Config['ckpr_dir'],
+                f"Loss{best_epoch_loss:.4f}_epoch{epoch:.0f}.bin")
             torch.save(model.state_dict(), PATH)
             print(f"Model Saved{sr_}")
         print()
@@ -193,7 +203,8 @@ def run(model: torch.nn.Module, optimizer: torch.optim.optimizer,
     end = time.time()
     time_elapsed = end - start
     print('Training complete in {:.0f}h {:.0f}m {:.0f}s'.format(
-        time_elapsed // 3600, (time_elapsed % 3600) // 60, (time_elapsed % 3600) % 60))
+        time_elapsed // 3600, (time_elapsed % 3600) // 60,
+        (time_elapsed % 3600) % 60))
     print(f"Best Loss: {best_epoch_loss:.4f}")
 
     # load best model weights
@@ -201,8 +212,11 @@ def run(model: torch.nn.Module, optimizer: torch.optim.optimizer,
 
     return model, history
 
+
 if __name__ == "__main__":
-    model = GUIEModel(Config["model_name"], embedding_size=64, target_size=[224, 224])
+    model = GUIEModel(Config["model_name"],
+                      embedding_size=64,
+                      target_size=[224, 224])
     optimizer = get_optimizer(model)
     scheduler = get_scheduler(optimizer)
     device = Config["device"]
