@@ -15,6 +15,7 @@ from sklearn.model_selection import StratifiedKFold
 from dataset import GUIEDataset, alb_transforms
 from loss import cross_entropy_loss
 from model import GUIEModel
+from preprocess import preprocess_main
 
 ##TODO:: implement DDP for multi-gpu training
 
@@ -32,7 +33,7 @@ def set_seed(seed: int = 42) -> None:
     os.environ['PYTHONHASHSEED'] = str(seed)
 
 
-def get_optimizer(model: torch.nn.Module) -> torch.optim.optimizer:
+def get_optimizer(model: torch.nn.Module) -> optim.Optimizer:
     optimizer = optim.Adam(model.parameters(),
                            lr=Config['learning_rate'],
                            weight_decay=Config['weight_decay'])
@@ -51,16 +52,17 @@ def create_folds(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def generate_df(data_dir: str) -> pd.DataFrame:
-    df = pd.read_csv(os.path.join(data_dir, 'train.csv'),
-                     low_memory=False,
-                     squeeze=True)
+def generate_df() -> pd.DataFrame:
+    # df = pd.read_csv(os.path.join(data_dir, 'train.csv'),
+    #                  low_memory=False,
+    #                  squeeze=True)
+    df = preprocess_main()
     df = create_folds(df)
     return df
 
 
 def get_scheduler(
-        optimizer: torch.optim.optimizer) -> torch.optim.lr_scheduler:
+        optimizer: torch.optim.Optimizer) -> torch.optim.lr_scheduler:
     if Config['scheduler'] == 'CosineAnnealingLR':
         scheduler = optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=Config['T_max'], eta_min=Config['min_lr'])
@@ -93,7 +95,7 @@ def get_dataloaders(df: pd.DataFrame, fold: int, dataset: GUIEDataset,
     return train_loader, valid_loader
 
 
-def train_one_epoch(model: torch.nn.Module, optimizer: torch.optim.optimizer,
+def train_one_epoch(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
                     scheduler: torch.optim.lr_scheduler,
                     dataloader: DataLoader, device: torch.device,
                     epoch: int) -> float:
@@ -131,7 +133,7 @@ def train_one_epoch(model: torch.nn.Module, optimizer: torch.optim.optimizer,
 
 
 @torch.inference_mode()
-def eval_one_epoch(model: torch.nn.Module, optimizer: torch.optim.optimizer,
+def eval_one_epoch(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
                    dataloader: DataLoader, device: torch.device, epoch: int):
     """ compute loss and prediction score during training"""
     model.eval()
@@ -164,7 +166,7 @@ def eval_one_epoch(model: torch.nn.Module, optimizer: torch.optim.optimizer,
         return epoch_loss
 
 
-def run(model: torch.nn.Module, optimizer: torch.optim.optimizer,
+def run(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler, device: torch.device,
         num_epochs: int):
     start = time.time()
@@ -172,7 +174,7 @@ def run(model: torch.nn.Module, optimizer: torch.optim.optimizer,
     best_epoch_loss = np.inf
     history = defaultdict(list)
 
-    df = generate_df(Config["data_dir"])
+    df = generate_df()
     train_loader, valid_loader = get_dataloaders(df, Config["fold"],
                                                  GUIEDataset, alb_transforms)
 
@@ -194,7 +196,7 @@ def run(model: torch.nn.Module, optimizer: torch.optim.optimizer,
             best_epoch_loss = val_epoch_loss
             best_model_wts = copy.deepcopy(model.state_dict())
             PATH = os.path.join(
-                Config['ckpr_dir'],
+                Config['ckpt_dir'],
                 f"Loss{best_epoch_loss:.4f}_epoch{epoch:.0f}.bin")
             torch.save(model.state_dict(), PATH)
             print(f"Model Saved{sr_}")
@@ -214,11 +216,11 @@ def run(model: torch.nn.Module, optimizer: torch.optim.optimizer,
 
 
 if __name__ == "__main__":
-    model = GUIEModel(Config["model_name"],
-                      embedding_size=64,
-                      target_size=[224, 224])
-    optimizer = get_optimizer(model)
-    scheduler = get_scheduler(optimizer)
     device = Config["device"]
     num_epochs = Config["num_epochs"]
+    model = GUIEModel(Config["model_name"],
+                      embedding_size=64,
+                      target_size=[224, 224]).to(device)
+    optimizer = get_optimizer(model)
+    scheduler = get_scheduler(optimizer)
     model, history = run(model, optimizer, scheduler, device, num_epochs)
