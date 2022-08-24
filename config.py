@@ -51,18 +51,18 @@ class ConfigType:
     n_accumulate=1
     device = torch.device("cuda:7" if torch.cuda.is_available() else "cpu")
 
-    num_epochs = 20
-    train_batch_size = 32
-    valid_batch_size = 64
+    num_epochs = 10
+    train_batch_size = 4
+    valid_batch_size = 4
     num_gpus = 4
-    num_classes = 10000
+    num_classes = 11
 
     model_name = "swin_large_patch4_window12_384_in22k" #"convnext"
     img_size = sizes[model_name]
 
     data_dir = '/media/volume4/130k-512x512-guie'
     fold = 1
-    ckpt_dir = '.'
+    ckpt_dir = '/media/volume4/130k-512x512-guie/ckpts'
 
     # ArcFace Hyperparameters
     s = 30.0
