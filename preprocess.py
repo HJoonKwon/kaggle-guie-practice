@@ -1,3 +1,57 @@
 # generate dataframe for training/evaluation
 # img_id | file_path | label_id
 #    0     data/a.jpg   N0100213 (imagenet)
+
+import os
+from tqdm import tqdm
+import json
+from sklearn.preprocessing import LabelEncoder
+import pandas as pd
+
+from config import Config
+
+
+def read_data()-> pd.DataFrame:
+    data_dir = Config["data_dir"]
+    df_path = os.path.join(data_dir, "train.csv")
+    df = pd.read_csv(df_path)
+    df['file_path'] = df.apply(
+        lambda rec: os.path.join(data_dir, rec['label'], rec['image_name']),
+        axis=1
+        # file_path example: ../Images130k/apparel/image0000.jpg
+    )
+    return df
+
+def preprocess_label(df: pd.DataFrame)-> pd.DataFrame:
+    #label encoding
+    encoder = LabelEncoder()
+    df['label_id'] = encoder.fit_transform(df['label'])
+
+    class_mappings = {}
+    class_inv_mappings = {}
+    labels = df['label'].unique()
+    for label in labels:
+        label_id = list(df[df['label']==label]['label_id'])[0]
+        class_mappings[label] = label_id
+        class_inv_mappings[label_id] = label
+
+    data_dir = Config["data_dir"]
+    class_mapping_path = os.path.join(data_dir, "class_mapping.json")
+    class_inv_mapping_path = os.path.join(data_dir, "class_inv_mapping.json")
+
+    with open(class_mapping_path, "wt") as f:
+        json.dump(class_mappings, f)
+
+    with open(class_inv_mapping_path, "wt") as f:
+        json.dump(class_inv_mappings, f)
+
+    return df
+
+def preprocess_main()-> pd.DataFrame:
+    df = read_data()
+    df = preprocess_label(df)
+    return df
+
+if __name__ == "__main__":
+    df = preprocess_main()
+    print(df)
