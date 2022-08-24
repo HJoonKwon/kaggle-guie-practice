@@ -71,7 +71,7 @@ class ArcMarginProduct(nn.Module):
 
          # --------------------------- convert label to one-hot ---------------------
         # one_hot = torch.zeros(cosine.size(), requires_grad=True, device='cuda')
-        one_hot = torch.zeros(cosine.size(), device='cuda')
+        one_hot = torch.zeros(cosine.size()).to(Config["device"])
         one_hot.scatter_(1, label.view(-1, 1).long(), 1)
         if self.ls_eps > 0: # label smoothing
             one_hot = (1 - self.ls_eps) * one_hot + self.ls_eps / self.num_out_feats
@@ -110,11 +110,11 @@ class GUIEModel(nn.Module):
         self.target_size = target_size
         self.backbone = timm.create_model(model_name, pretrained=True, num_classes=0)
         #TODO:: maybe using features_only=True option seems better
-        self.pooling = GEM()
-        in_features = self.model.classifier.in_features
+        # self.pooling = GEM()
+        in_features = self.backbone.num_features
         self.embedding = nn.Linear(in_features, embedding_size)
         self.fc = ArcMarginProduct(embedding_size,
-                                   num_classes=Config["num_classes"],
+                                   num_out_feats=Config["num_classes"],
                                    s=Config["s"],
                                    m=Config["m"],
                                    easy_margin=Config["easy_margin"],
@@ -122,13 +122,16 @@ class GUIEModel(nn.Module):
 
     def forward(self, images, labels):
         features = self.backbone(images)
-        pooled_features = self.pooling(features).flatten(1) # flatten dim>=1 part
+        # pooled_features = self.pooling(features).flatten(1) # flatten dim>=1 part
+        # pooled_features = self.pooling(features)
+        pooled_features = features
         embedding = self.embedding(pooled_features)
         output = self.fc(embedding, labels)
         return output
 
     def extract(self, images):
         features = self.backbone(images)
-        pooled_features = self.pooling(features).flatten(1)
+        # pooled_features = self.pooling(features).flatten(1)
+        pooled_features = features
         embedding = self.embedding(pooled_features)
         return embedding
