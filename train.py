@@ -18,6 +18,8 @@ from model import GUIEModel
 from preprocess import preprocess_main
 
 ##TODO:: implement DDP for multi-gpu training
+##TODO:: freezing model backbone
+##TODO:: different model output for training/inference (https://www.kaggle.com/code/motono0223/guie-clip-tensorflow-train-example/notebook)
 
 
 def set_seed(seed: int = 42) -> None:
