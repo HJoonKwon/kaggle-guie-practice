@@ -182,6 +182,7 @@ def run(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
         train_epoch_loss = train_one_epoch(model, optimizer, scheduler,
                                            train_loader, device, epoch)
         val_epoch_loss = eval_one_epoch(model,
+                                        optimizer,
                                         valid_loader,
                                         device=device,
                                         epoch=epoch)
