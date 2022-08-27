@@ -29,6 +29,7 @@ from utils import init_for_distributed, setup_for_distributed
 ##TODO:: different model output for training/inference (https://www.kaggle.com/code/motono0223/guie-clip-tensorflow-train-example/notebook)
 ##TODO:: syncnorm?
 ##TODO:: best model?
+##TODO:: wandb
 
 
 def set_seed(seed: int = 42) -> None:
