@@ -38,36 +38,53 @@ sizes = {
     'swin_base_patch4_window12_384_in22k': (384, 384),
     'swin_large_patch4_window7_224_in22k': (224, 224),
     'swin_large_patch4_window12_384_in22k': (384, 384),
-
 }
 
+
 class ConfigType:
-    learning_rate = 1e-4
+    optim_name: str = "SGD"  #"Adam"
+    learning_rate: float = 1e-4
+    weight_decay: float = 1e-6
+    momentum: float = 0.9
+
     scheduler = "CosineAnnealingLR"
-    min_lr = 1e-6
-    T_max = 500
-    weight_decay = 1e-6
-    n_fold=5
-    n_accumulate=1
-    device = torch.device("cuda:7" if torch.cuda.is_available() else "cpu")
+    min_lr: float = 1e-6
+    T_max: int = 500
+    T_0: int = 5
 
-    num_epochs = 10
-    train_batch_size = 4
-    valid_batch_size = 4
-    num_gpus = 4
-    num_classes = 11
+    # StepLR
+    step_size: int = 30
+    gamma: float = 0.1
 
-    model_name = "swin_large_patch4_window12_384_in22k" #"convnext"
-    img_size = sizes[model_name]
+    n_fold: int = 5
+    n_accumulate: int = 1
+
+    start_epoch: int = 0
+    epoch: int = 10
+
+    num_classes: int = 11
+    embedding_size: int = 64
+
+    model_name = "swin_large_patch4_window12_384_in22k"  #"convnext"
+    img_size: tuple = sizes[model_name]
 
     data_dir = '/media/volume4/130k-512x512-guie'
-    fold = 1
-    ckpt_dir = '/media/volume4/130k-512x512-guie/ckpts'
+    fold: int = 1
+    save_path = '/media/volume4/130k-512x512-guie/ckpts'
+    save_file_name: str = f'{model_name}_images130k'
+    gpu_ids = ["0", "1", "2", "3"]
+    num_workers_per_gpu: int = 4
+    train_sample_per_gpu: int = 4
+    valid_sample_per_gpu: int = 4
+    rank: int = 0
+    port: int = 2022
+
+    vis_step: int = 10
 
     # ArcFace Hyperparameters
-    s = 30.0
-    m =0.50
-    ls_eps = 0.0
+    s: float = 30.0
+    m: float = 0.50
+    ls_eps: float = 0.0
     easy_margin = False
 
     def __getitem__(self, key):

@@ -1,24 +1,25 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn import Parameter
 import math
 import timm
 from config import Config
+
 
 class GEM(nn.Module):
     """reference: https://amaarora.github.io/2020/08/30/gempool.html"""
     def __init__(self, p=3, eps=1e-6):
         super(GEM, self).__init__()
-        self.p = nn.Parameter(torch.ones(1) * p)
+        self.p = Parameter(torch.ones(1) * p)
         self.eps = eps
 
     def forward(self, x):
         return self.gem(x, p=self.p, eps=self.eps)
 
-    def gem(self, x, p=3, eps=1e-6):
+    def gem(self, x, p=Parameter(torch.ones(1) * 3), eps=1e-6):
         # return F.avg_pool2d(x.clamp(min=eps).pow(p), (x.size(-2), x.size(-1))).pow(1./p)
-        return x.clamp(min=self.eps).pow(self.p).mean(
-            (-2, -1)).pow(1.0 / self.p)
+        return x.clamp(min=eps).pow(p).mean((-2, -1)).pow(1.0 / p)
 
     def __repr__(self):
         return self.__class__.__name__ + \
@@ -48,15 +49,15 @@ class ArcMarginProduct(nn.Module):
         self.num_out_feats = num_out_feats
         self.s = s
         self.m = m
-        self.ls_eps = ls_eps # label smoothing
-        self.weight = nn.Parameter(torch.FloatTensor(num_out_feats, num_in_feats))
+        self.ls_eps = ls_eps  # label smoothing
+        self.weight = Parameter(torch.FloatTensor(num_out_feats, num_in_feats))
         nn.init.xavier_uniform_(self.weight)
 
         self.easy_margin = easy_margin
         self.cos_m = math.cos(m)
         self.sin_m = math.sin(m)
-        self.th = math.cos(math.pi-m)
-        self.mm = math.sin(math.pi-m) * m
+        self.th = math.cos(math.pi - m)
+        self.mm = math.sin(math.pi - m) * m
 
     def forward(self, input, label):
         # --------------------------- cos(theta) & phi(theta) ---------------------
@@ -69,12 +70,16 @@ class ArcMarginProduct(nn.Module):
         else:
             phi = torch.where(cosine > self.th, phi, cosine - self.mm)
 
-         # --------------------------- convert label to one-hot ---------------------
+        # --------------------------- convert label to one-hot ---------------------
         # one_hot = torch.zeros(cosine.size(), requires_grad=True, device='cuda')
-        one_hot = torch.zeros(cosine.size()).to(Config["device"])
-        one_hot.scatter_(1, label.view(-1, 1).long(), 1)
-        if self.ls_eps > 0: # label smoothing
-            one_hot = (1 - self.ls_eps) * one_hot + self.ls_eps / self.num_out_feats
+        # one_hot = torch.zeros(cosine.size()).cuda()
+        # one_hot = torch.zeros(cosine.size()).to(Config["device"])
+        # one_hot = one_hot.scatter_(1, label.view(-1, 1).long(), 1)
+        one_hot = F.one_hot(label, num_classes=self.num_out_feats)
+
+        if self.ls_eps > 0:  # label smoothing
+            one_hot = (
+                1 - self.ls_eps) * one_hot + self.ls_eps / self.num_out_feats
 
         output = (one_hot * phi) + ((1.0 - one_hot) * cosine)
         output *= self.s
@@ -86,7 +91,7 @@ class ArcMarginProductSubcenter(nn.Module):
     """reference: https://github.com/knshnb/kaggle-happywhale-1st-place/blob/master/src/metric_learning.py"""
     def __init__(self, num_in_feats: int, num_out_feats: int, k: int = 3):
         super(ArcMarginProductSubcenter, self).__init__()
-        self.weight = nn.Parameter(
+        self.weight = Parameter(
             torch.FloatTensor(num_in_feats * k, num_out_feats))
         self.reset_parameter()
         self.k = k
@@ -105,20 +110,22 @@ class ArcMarginProductSubcenter(nn.Module):
 
 
 class GUIEModel(nn.Module):
-    def __init__(self, model_name, embedding_size=64, target_size=[224, 224]):
+    def __init__(self, opts):
         super(GUIEModel, self).__init__()
-        self.target_size = target_size
-        self.backbone = timm.create_model(model_name, pretrained=True, num_classes=0)
+        self.backbone = timm.create_model(opts.model_name,
+                                          pretrained=True,
+                                          num_classes=0)
         #TODO:: maybe using features_only=True option seems better
         # self.pooling = GEM()
         in_features = self.backbone.num_features
-        self.embedding = nn.Linear(in_features, embedding_size)
-        self.fc = ArcMarginProduct(embedding_size,
-                                   num_out_feats=Config["num_classes"],
-                                   s=Config["s"],
-                                   m=Config["m"],
-                                   easy_margin=Config["easy_margin"],
-                                   ls_eps=Config["ls_eps"])
+        self.embedding = nn.Linear(in_features=in_features,
+                                   out_features=opts.embedding_size)
+        self.fc = ArcMarginProduct(num_in_feats=opts.embedding_size,
+                                   num_out_feats=opts.num_classes,
+                                   s=opts.s,
+                                   m=opts.m,
+                                   easy_margin=opts.easy_margin,
+                                   ls_eps=opts.ls_eps)
 
     def forward(self, images, labels):
         features = self.backbone(images)
