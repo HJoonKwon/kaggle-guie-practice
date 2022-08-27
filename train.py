@@ -25,9 +25,10 @@ from model import GUIEModel
 from preprocess import preprocess_main
 from utils import init_for_distributed, setup_for_distributed
 
-##TODO:: implement DDP for multi-gpu training
 ##TODO:: freezing model backbone
 ##TODO:: different model output for training/inference (https://www.kaggle.com/code/motono0223/guie-clip-tensorflow-train-example/notebook)
+##TODO:: syncnorm?
+##TODO:: best model?
 
 
 def set_seed(seed: int = 42) -> None:
@@ -36,6 +37,7 @@ def set_seed(seed: int = 42) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
     # When running on the CuDNN backend, two further options must be set
     cudnn.deterministic = True
     cudnn.benchmark = False
@@ -397,23 +399,12 @@ def run(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
 
 if __name__ == "__main__":
 
+    set_seed()
     config = ConfigType()
 
-    # set model
-    # local_rank = int(os.environ['LOCAL_RANK'])
-    # model = GUIEModel(Config["model_name"],
-    #                   embedding_size=64,
-    #                   target_size=[224, 224]).cuda()
     # convert batchnorm layers to syncbatchnorm layers
     # model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
-    # model = torch.nn.parallel.DistributedDataParallel(model,
-    #                                                   device_ids=[local_rank])
-    # optimizer = get_optimizer(model)
-    # scheduler = get_scheduler(optimizer)
-    # model, history = run(model, optimizer, scheduler, num_epochs, local_rank)
-    # run(model, optimizer, scheduler, num_epochs, local_rank)
 
-    #main_worker(config.rank, config)
     df = generate_df()
     mp.spawn(main_worker,
              args=(
