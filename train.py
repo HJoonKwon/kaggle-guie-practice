@@ -226,7 +226,8 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType):
         # train
         model.train()
         train_sampler.set_epoch(epoch)
-        for step, (images, labels) in enumerate(train_loader):
+        bar = tqdm(enumerate(train_loader), total=len(train_loader))
+        for step, (images, labels) in bar:
             images = images.to(local_gpu_id)
             labels = labels.to(local_gpu_id)
             outputs = model(images, labels)
@@ -246,6 +247,13 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType):
             # visualization
             if (step % opts.vis_step == 0
                     or step == len(train_loader) - 1) and opts.rank == 0:
+
+                # bar.set_postfix(Epoch=epoch,
+                #                 Iter=step,
+                #                 Train_Loss=loss.item(),
+                #                 LR=lr,
+                #                 Time=toc - tic)
+
                 print(
                     f"Epoch [{epoch}/{opts.epoch}], Iter [{step}/{len(train_loader)-1}], Loss: {loss.item():.4f},\n"
                     f"LR: {lr:.5f}, Time: {toc-tic:.2f}")
@@ -293,7 +301,8 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType):
             total = 0
 
             with torch.no_grad():
-                for step, (images, labels) in enumerate(valid_loader):
+                bar = tqdm(enumerate(valid_loader), total=len(valid_loader))
+                for step, (images, labels) in bar:
                     images = images.to(local_gpu_id)
                     labels = labels.to(local_gpu_id)
                     outputs = model(images, labels)
@@ -324,6 +333,10 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType):
 
             val_avg_loss = val_avg_loss / len(valid_loader)
 
+            bar.set_postfix(Epoch=f"{epoch}/{opts.epoch}",
+                            Valid_Avg_Loss=val_avg_loss,
+                            Accuracy_Top1=accuracy_top1,
+                            Accuracy_Top5=accuracy_top5)
             if vis is not None:
                 vis.line(X=torch.ones((1, 3)) * epoch,
                          Y=torch.Tensor(
