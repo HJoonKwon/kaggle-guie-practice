@@ -156,7 +156,7 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
     # data loader
     loaders_dict = get_dataloaders(df, alb_transforms, opts)
     train_loader, train_sampler = loaders_dict["train"]
-    valid_loader, valid_sampler = loaders_dict["valid"]
+    valid_loader, _ = loaders_dict["valid"]
 
     # model
     model = GUIEModel(opts)
