@@ -115,6 +115,9 @@ class GUIEModel(nn.Module):
         self.backbone = timm.create_model(opts.model_name,
                                           pretrained=True,
                                           num_classes=0)
+        for param in self.backbone.parameters():
+            param.requires_grad = False
+        # self.backbone.requires_grad_(False)
         #TODO:: maybe using features_only=True option seems better
         # self.pooling = GEM()
         in_features = self.backbone.num_features

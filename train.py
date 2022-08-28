@@ -25,7 +25,6 @@ from model import GUIEModel
 from preprocess import preprocess_main
 from utils import init_for_distributed, setup_for_distributed
 
-##TODO:: freezing model backbone
 ##TODO:: different model output for training/inference (https://www.kaggle.com/code/motono0223/guie-clip-tensorflow-train-example/notebook)
 ##TODO:: syncnorm?
 ##TODO:: best model?
