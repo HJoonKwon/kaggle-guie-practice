@@ -90,9 +90,6 @@ def create_folds(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def generate_df() -> pd.DataFrame:
-    # df = pd.read_csv(os.path.join(data_dir, 'train.csv'),
-    #                  low_memory=False,
-    #                  squeeze=True)
     df = preprocess_main()
     df = create_folds(df)
     return df
@@ -244,7 +241,7 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
                              opts.save_file_name + f'.{epoch}.pth.tar'))
             print(f"save pth.tar {epoch} epoch!")
 
-        # test
+        # evaluation
         if opts.rank == 0:
             model.eval()
 
@@ -354,11 +351,19 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
 
 if __name__ == "__main__":
 
+    # reproducibility
     set_seed()
+
+    # read user config
     config = ConfigType()
+
+    # set wandb run
     run = setup_run(config)
 
+    # generate dataframe with preprocessing
     df = generate_df()
+
+    # multiprocessing for multi-gpu training
     mp.spawn(main_worker,
              args=(
                  df,
@@ -367,5 +372,9 @@ if __name__ == "__main__":
              ),
              nprocs=len(config.gpu_ids),
              join=True)
+
+    #emtpy cuda memory after training
     torch.cuda.empty_cache()
+
+    # finish wandb process
     wandb.finish()

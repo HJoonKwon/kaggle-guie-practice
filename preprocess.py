@@ -11,7 +11,7 @@ import pandas as pd
 from config import Config
 
 
-def read_data()-> pd.DataFrame:
+def read_data() -> pd.DataFrame:
     data_dir = Config["data_dir"]
     df_path = os.path.join(data_dir, "train.csv")
     df = pd.read_csv(df_path)
@@ -22,7 +22,8 @@ def read_data()-> pd.DataFrame:
     )
     return df
 
-def preprocess_label(df: pd.DataFrame)-> pd.DataFrame:
+
+def preprocess_label(df: pd.DataFrame) -> pd.DataFrame:
     #label encoding
     encoder = LabelEncoder()
     df['label_id'] = encoder.fit_transform(df['label'])
@@ -31,7 +32,7 @@ def preprocess_label(df: pd.DataFrame)-> pd.DataFrame:
     class_inv_mappings = {}
     labels = df['label'].unique()
     for label in labels:
-        label_id = list(df[df['label']==label]['label_id'])[0]
+        label_id = list(df[df['label'] == label]['label_id'])[0]
         class_mappings[label] = label_id
         class_inv_mappings[label_id] = label
 
@@ -47,10 +48,12 @@ def preprocess_label(df: pd.DataFrame)-> pd.DataFrame:
 
     return df
 
-def preprocess_main()-> pd.DataFrame:
+
+def preprocess_main() -> pd.DataFrame:
     df = read_data()
     df = preprocess_label(df)
     return df
+
 
 if __name__ == "__main__":
     df = preprocess_main()
