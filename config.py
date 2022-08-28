@@ -42,36 +42,49 @@ sizes = {
 
 
 class ConfigType:
+
+    # optimizer setting
     optim_name: str = "SGD"  #"Adam"
     learning_rate: float = 1e-4
     weight_decay: float = 1e-6
     momentum: float = 0.9
 
+    # learning rate scheduler
     scheduler = "CosineAnnealingLR"
     min_lr: float = 1e-6
     T_max: int = 500
     T_0: int = 5
 
-    # StepLR
+    # ex. StepLR
     step_size: int = 30
     gamma: float = 0.1
 
+    # data split (GroupKFold)
     n_fold: int = 5
-    n_accumulate: int = 1
+    fold: int = 1
 
+    # traning setting
+    n_accumulate: int = 1
     start_epoch: int = 0
     epoch: int = 10
 
+    # model setting
     num_classes: int = 11
     embedding_size: int = 64
-
     model_name: str = "swin_large_patch4_window12_384_in22k"  #"convnext"
     img_size: tuple = sizes[model_name]
+    # ArcFace Hyperparameters
+    s: float = 30.0
+    m: float = 0.50
+    ls_eps: float = 0.0
+    easy_margin = False
 
+    # directories
     data_dir: str = '/media/volume4/130k-512x512-guie'
-    fold: int = 1
     save_path: str = '/media/volume4/130k-512x512-guie/ckpts'
     save_file_name: str = f'{model_name}_images130k'
+
+    # multi-gpu setting
     gpu_ids: List[str] = ["0", "1", "2", "3"]
     num_workers_per_gpu: int = 4
     train_sample_per_gpu: int = 4
@@ -79,18 +92,11 @@ class ConfigType:
     rank: int = 0
     port: int = 2022
 
+    # wandb logging
     vis_step: int = 10
-
-    # wandb
     log_all: bool = False
     log_rank: int = 0
     project: str = "kaggle-guie"
-
-    # ArcFace Hyperparameters
-    s: float = 30.0
-    m: float = 0.50
-    ls_eps: float = 0.0
-    easy_margin = False
 
     def __getitem__(self, key):
         return getattr(self, key, None)
