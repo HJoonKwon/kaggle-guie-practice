@@ -16,6 +16,7 @@ import time
 import copy
 from collections import defaultdict
 import pandas as pd
+import wandb
 import visdom
 from config import ConfigType
 from sklearn.model_selection import StratifiedKFold
@@ -29,6 +30,21 @@ from utils import init_for_distributed, setup_for_distributed
 ##TODO:: syncnorm?
 ##TODO:: best model?
 ##TODO:: wandb
+
+
+def setup_run(args: ConfigType):
+    if args.log_all:
+        run = wandb.init(
+            project=args.project,
+            group="DDP",
+        )
+    else:
+        if args.log_rank == 0:
+            run = wandb.init(project=args.project, )
+        else:
+            run = None
+
+    return run
 
 
 def set_seed(seed: int = 42) -> None:
@@ -197,9 +213,12 @@ def eval_one_epoch(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
         return epoch_loss
 
 
-def main_worker(rank, df: pd.DataFrame, opts: ConfigType):
+def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
     local_gpu_id = init_for_distributed(rank, opts)
-    vis = visdom.Visdom(port=opts.port)
+    is_master = local_gpu_id == 0
+
+    # wandb log
+    do_log = run is not None
 
     # data loader
     loaders_dict = get_dataloaders(df, alb_transforms, opts)
@@ -210,6 +229,10 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType):
     model = GUIEModel(opts)
     model = model.cuda(local_gpu_id)
     model = DDP(module=model, device_ids=[local_gpu_id])
+
+    # watch gradients for rank0
+    if is_master:
+        run.watch(model)
 
     # criterion
     criterion = torch.nn.CrossEntropyLoss().to(local_gpu_id)
@@ -226,6 +249,7 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType):
         # train
         model.train()
         train_sampler.set_epoch(epoch)
+        train_avg_loss = 0
         bar = tqdm(enumerate(train_loader), total=len(train_loader))
         for step, (images, labels) in bar:
             images = images.to(local_gpu_id)
@@ -238,6 +262,8 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType):
             loss.backward()
             optimizer.step()
 
+            train_avg_loss += loss.item()
+
             # retreive lr
             lr = optimizer.param_groups[0]['lr']
 
@@ -248,25 +274,18 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType):
             if (step % opts.vis_step == 0
                     or step == len(train_loader) - 1) and opts.rank == 0:
 
-                # bar.set_postfix(Epoch=epoch,
-                #                 Iter=step,
-                #                 Train_Loss=loss.item(),
-                #                 LR=lr,
-                #                 Time=toc - tic)
-
                 print(
                     f"Epoch [{epoch}/{opts.epoch}], Iter [{step}/{len(train_loader)-1}], Loss: {loss.item():.4f},\n"
                     f"LR: {lr:.5f}, Time: {toc-tic:.2f}")
 
-                vis.line(X=torch.ones(
-                    (1, 1)) * step + epoch * len(train_loader),
-                         Y=torch.Tensor([loss]).unsqueeze(0),
-                         update='append',
-                         win='loss',
-                         opts=dict(x_label='step',
-                                   y_label='loss',
-                                   title='loss',
-                                   legend=['total_loss']))
+                if do_log:
+                    run.log({"train_loss": loss.item()})
+
+        if do_log:
+            run.log({
+                "epoch": epoch,
+                "train_avg_loss": train_avg_loss / len(train_loader),
+            })
 
         if opts.rank == 0:
             if not os.path.exists(opts.save_path):
@@ -333,24 +352,18 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType):
 
             val_avg_loss = val_avg_loss / len(valid_loader)
 
-            bar.set_postfix(Epoch=f"{epoch}/{opts.epoch}",
-                            Valid_Avg_Loss=val_avg_loss,
-                            Accuracy_Top1=accuracy_top1,
-                            Accuracy_Top5=accuracy_top5)
-            if vis is not None:
-                vis.line(X=torch.ones((1, 3)) * epoch,
-                         Y=torch.Tensor(
-                             [accuracy_top1, accuracy_top5,
-                              val_avg_loss]).unsqueeze(0),
-                         update='append',
-                         win='test_loss_acc',
-                         opts=dict(x_label='epoch',
-                                   y_label='test_loss and acc',
-                                   title='test_loss and accuracy',
-                                   legend=[
-                                       'accuracy_top1', 'accuracy_top5',
-                                       'avg_loss'
-                                   ]))
+            if do_log:
+                run.log({
+                    "epoch": epoch,
+                    "val_avg_loss": val_avg_loss,
+                    "top-1 accuracy": accuracy_top1,
+                    "top-5 accuracy": accuracy_top5
+                })
+
+            # bar.set_postfix(Epoch=f"{epoch}/{opts.epoch}",
+            #                 Valid_Avg_Loss=val_avg_loss,
+            #                 Accuracy_Top1=accuracy_top1,
+            #                 Accuracy_Top5=accuracy_top5)
 
             print(f"top-1 percentage: {accuracy_top1*100:.3f}%")
             print(f"top-5 percentage: {accuracy_top5*100:.3f}%")
@@ -359,61 +372,62 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType):
     return 0
 
 
-def run(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler._LRScheduler, num_epochs: int,
-        local_rank: int):
-    start = time.time()
-    best_model_wts = copy.deepcopy(model.state_dict())
-    best_epoch_loss = np.inf
-    history = defaultdict(list)
+##TODO:: deprecated
+# def run(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
+#         scheduler: torch.optim.lr_scheduler._LRScheduler, num_epochs: int,
+#         local_rank: int):
+#     start = time.time()
+#     best_model_wts = copy.deepcopy(model.state_dict())
+#     best_epoch_loss = np.inf
+#     history = defaultdict(list)
 
-    df = generate_df()
-    train_loader, valid_loader = get_dataloaders(df, Config["fold"],
-                                                 GUIEDataset, alb_transforms)
+#     df = generate_df()
+#     train_loader, valid_loader = get_dataloaders(df, Config["fold"],
+#                                                  GUIEDataset, alb_transforms)
 
-    for epoch in range(1, num_epochs + 1):
-        train_loader.sampler.set_epoch(epoch)
-        train_epoch_loss = train_one_epoch(model, optimizer, scheduler,
-                                           train_loader, epoch)
-        val_epoch_loss = eval_one_epoch(model,
-                                        optimizer,
-                                        valid_loader,
-                                        epoch=epoch)
-        if local_rank == 0:
-            history['Train Loss'].append(train_epoch_loss)
-            history['Valid Loss'].append(val_epoch_loss)
+#     for epoch in range(1, num_epochs + 1):
+#         train_loader.sampler.set_epoch(epoch)
+#         train_epoch_loss = train_one_epoch(model, optimizer, scheduler,
+#                                            train_loader, epoch)
+#         val_epoch_loss = eval_one_epoch(model,
+#                                         optimizer,
+#                                         valid_loader,
+#                                         epoch=epoch)
+#         if local_rank == 0:
+#             history['Train Loss'].append(train_epoch_loss)
+#             history['Valid Loss'].append(val_epoch_loss)
 
-            # deep copy the model
-            if val_epoch_loss <= best_epoch_loss:
-                print(
-                    f"{b_}Validation Loss Improved ({best_epoch_loss} ---> {val_epoch_loss})"
-                )
-                # best_epoch_loss = val_epoch_loss
-                # best_model_wts = copy.deepcopy(model.state_dict())
-                # PATH = os.path.join(
-                #     Config['ckpt_dir'],
-                #     f"Loss{best_epoch_loss:.4f}_epoch{epoch:.0f}.bin")
-                # torch.save(model.state_dict(), PATH)
-                # print(f"Model Saved{sr_}")
-            print()
+#             # deep copy the model
+#             if val_epoch_loss <= best_epoch_loss:
+#                 print(
+#                     f"{b_}Validation Loss Improved ({best_epoch_loss} ---> {val_epoch_loss})"
+#                 )
+#                 # best_epoch_loss = val_epoch_loss
+#                 # best_model_wts = copy.deepcopy(model.state_dict())
+#                 # PATH = os.path.join(
+#                 #     Config['ckpt_dir'],
+#                 #     f"Loss{best_epoch_loss:.4f}_epoch{epoch:.0f}.bin")
+#                 # torch.save(model.state_dict(), PATH)
+#                 # print(f"Model Saved{sr_}")
+#             print()
 
-    end = time.time()
-    time_elapsed = end - start
-    print('Training complete in {:.0f}h {:.0f}m {:.0f}s'.format(
-        time_elapsed // 3600, (time_elapsed % 3600) // 60,
-        (time_elapsed % 3600) % 60))
-    print(f"Best Loss: {best_epoch_loss:.4f}")
+#     end = time.time()
+#     time_elapsed = end - start
+#     print('Training complete in {:.0f}h {:.0f}m {:.0f}s'.format(
+#         time_elapsed // 3600, (time_elapsed % 3600) // 60,
+#         (time_elapsed % 3600) % 60))
+#     print(f"Best Loss: {best_epoch_loss:.4f}")
 
-    # load best model weights
-    # model.load_state_dict(best_model_wts)
+#     # load best model weights
+#     # model.load_state_dict(best_model_wts)
 
-    # return model, history
-
+#     # return model, history
 
 if __name__ == "__main__":
 
     set_seed()
     config = ConfigType()
+    run = setup_run(config)
 
     # convert batchnorm layers to syncbatchnorm layers
     # model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
@@ -423,7 +437,9 @@ if __name__ == "__main__":
              args=(
                  df,
                  config,
+                 run,
              ),
              nprocs=len(config.gpu_ids),
              join=True)
     torch.cuda.empty_cache()
+    wandb.finish()

@@ -81,6 +81,11 @@ class ConfigType:
 
     vis_step: int = 10
 
+    # wandb
+    log_all = False
+    log_rank: int = 0
+    project: str = "kaggle-guie"
+
     # ArcFace Hyperparameters
     s: float = 30.0
     m: float = 0.50
