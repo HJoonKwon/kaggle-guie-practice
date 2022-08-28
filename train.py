@@ -294,11 +294,6 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
                     "top-5 accuracy": accuracy_top5
                 })
 
-            # bar.set_postfix(Epoch=f"{epoch}/{opts.epoch}",
-            #                 Valid_Avg_Loss=val_avg_loss,
-            #                 Accuracy_Top1=accuracy_top1,
-            #                 Accuracy_Top5=accuracy_top5)
-
             print(f"top-1 percentage: {accuracy_top1*100:.3f}%")
             print(f"top-5 percentage: {accuracy_top5*100:.3f}%")
             if scheduler:
@@ -362,9 +357,6 @@ if __name__ == "__main__":
     set_seed()
     config = ConfigType()
     run = setup_run(config)
-
-    # convert batchnorm layers to syncbatchnorm layers
-    # model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 
     df = generate_df()
     mp.spawn(main_worker,
