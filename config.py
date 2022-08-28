@@ -1,4 +1,4 @@
-import torch
+from typing import List
 
 sizes = {
     # EfficientNet
@@ -65,14 +65,14 @@ class ConfigType:
     num_classes: int = 11
     embedding_size: int = 64
 
-    model_name = "swin_large_patch4_window12_384_in22k"  #"convnext"
+    model_name: str = "swin_large_patch4_window12_384_in22k"  #"convnext"
     img_size: tuple = sizes[model_name]
 
-    data_dir = '/media/volume4/130k-512x512-guie'
+    data_dir: str = '/media/volume4/130k-512x512-guie'
     fold: int = 1
-    save_path = '/media/volume4/130k-512x512-guie/ckpts'
+    save_path: str = '/media/volume4/130k-512x512-guie/ckpts'
     save_file_name: str = f'{model_name}_images130k'
-    gpu_ids = ["0", "1", "2", "3"]
+    gpu_ids: List[str] = ["0", "1", "2", "3"]
     num_workers_per_gpu: int = 4
     train_sample_per_gpu: int = 4
     valid_sample_per_gpu: int = 4
@@ -82,7 +82,7 @@ class ConfigType:
     vis_step: int = 10
 
     # wandb
-    log_all = False
+    log_all: bool = False
     log_rank: int = 0
     project: str = "kaggle-guie"
 
