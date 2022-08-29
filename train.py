@@ -181,7 +181,7 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
         model.train()
         train_sampler.set_epoch(epoch)
         train_avg_loss = 0
-        bar = tqdm(enumerate(train_loader), total=len(train_loader))
+        bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=150)
         for step, (images, labels) in bar:
             images = images.to(local_gpu_id)
             labels = labels.to(local_gpu_id)
@@ -205,8 +205,8 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
             if (step % opts.vis_step == 0
                     or step == len(train_loader) - 1) and opts.rank == 0:
 
-                print(
-                    f"Epoch [{epoch}/{opts.epoch}], Iter [{step}/{len(train_loader)-1}], Loss: {loss.item():.4f},\n"
+                bar.set_description(
+                    f"Epoch [{epoch}/{opts.epoch}], Iter [{step}/{len(train_loader)-1}], Loss: {loss.item():.4f}, "
                     f"LR: {lr:.5f}, Time: {toc-tic:.2f}")
 
                 if do_log:
