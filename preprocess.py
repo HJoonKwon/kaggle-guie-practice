@@ -11,7 +11,19 @@ import pandas as pd
 from config import Config
 
 
-def read_data() -> pd.DataFrame:
+def read_data_ImageNet1k() -> pd.DataFrame:
+    data_dir = Config.data_dir
+
+def preprocess_label_Images130k(df: pd.DataFrame) -> pd.DataFrame:
+    pass
+
+def preprocess_ImageNet1k() -> pd.DataFrame:
+    df = read_data_ImageNet1k()
+    df = preprocess_ImageNet1k(df)
+
+# ------------------------------------------------------
+
+def read_data_Images130k() -> pd.DataFrame:
     data_dir = Config.data_dir
     df_path = os.path.join(data_dir, "train.csv")
     df = pd.read_csv(df_path)
@@ -23,7 +35,7 @@ def read_data() -> pd.DataFrame:
     return df
 
 
-def preprocess_label(df: pd.DataFrame) -> pd.DataFrame:
+def preprocess_label_Images130k(df: pd.DataFrame) -> pd.DataFrame:
     #label encoding
     encoder = LabelEncoder()
     df['label_id'] = encoder.fit_transform(df['label'])
@@ -49,10 +61,20 @@ def preprocess_label(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def preprocess_main() -> pd.DataFrame:
-    df = read_data()
-    df = preprocess_label(df)
+def preprocess_Images130k() -> pd.DataFrame:
+    df = read_data_Images130k()
+    df = preprocess_label_Images130k(df)
     return df
+
+# ------------------------------------------------------
+
+def preprocess_main() -> pd.DataFrame:
+    if Config.data_name.lower() == "images130k":
+        return preprocess_Images130k()
+    elif Config.data_name.lower() == "imagenet1k":
+        return preprocess_ImageNet1k()
+    else:
+        raise ValueError(f"dataset {Config.data_name} is not supported")
 
 
 if __name__ == "__main__":
