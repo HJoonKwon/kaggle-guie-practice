@@ -121,8 +121,11 @@ class GUIEModel(nn.Module):
         #TODO:: maybe using features_only=True option seems better
         # self.pooling = GEM()
         in_features = self.backbone.num_features
-        self.embedding = nn.Linear(in_features=in_features,
-                                   out_features=opts.embedding_size)
+        self.embedding_neck = nn.Sequential(
+            nn.Linear(in_features=in_features,
+                                   out_features=opts.embedding_size),
+            nn.SyncBatchNorm(num_features=opts.embedding_size),
+        )
         self.fc = ArcMarginProduct(num_in_feats=opts.embedding_size,
                                    num_out_feats=opts.num_classes,
                                    s=opts.s,
@@ -135,7 +138,8 @@ class GUIEModel(nn.Module):
         # pooled_features = self.pooling(features).flatten(1) # flatten dim>=1 part
         # pooled_features = self.pooling(features)
         pooled_features = features
-        embedding = self.embedding(pooled_features)
+        embedding = self.embedding_neck(pooled_features)
+        embedding = F.normalize(embedding, p=2.0)
         output = self.fc(embedding, labels)
         return output
 
@@ -143,5 +147,6 @@ class GUIEModel(nn.Module):
         features = self.backbone(images)
         # pooled_features = self.pooling(features).flatten(1)
         pooled_features = features
-        embedding = self.embedding(pooled_features)
+        embedding = self.embedding_neck(pooled_features)
+        embedding = F.normalize(embedding, p=2.0)
         return embedding

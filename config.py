@@ -66,16 +66,16 @@ class ConfigType:
     # traning setting
     n_accumulate: int = 1
     start_epoch: int = 0
-    epoch: int = 10
+    epoch: int = 5
 
     # model setting
     num_classes: int = 11
-    embedding_size: int = 64
+    embedding_size: int = 256
     model_name: str = "swin_large_patch4_window12_384_in22k"  #"convnext"
     img_size: tuple = sizes[model_name]
     # ArcFace Hyperparameters
     s: float = 30.0
-    m: float = 0.50
+    m: float = 0.30
     ls_eps: float = 0.0
     easy_margin = False
 
@@ -93,7 +93,7 @@ class ConfigType:
     port: int = 2022
 
     # wandb logging
-    vis_step: int = 10
+    vis_step: int = 100
     log_all: bool = False
     log_rank: int = 0
     project: str = "kaggle-guie"
