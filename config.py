@@ -80,6 +80,7 @@ class ConfigType:
     easy_margin = False
 
     # directories
+    data_name: str = 'Images130k'
     data_dir: str = '/media/volume4/130k-512x512-guie'
     save_path: str = '/media/volume4/130k-512x512-guie/ckpts'
     save_file_name: str = f'{model_name}_images130k'
