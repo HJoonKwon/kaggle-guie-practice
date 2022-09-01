@@ -91,6 +91,15 @@ class ConfigType:
     ls_eps: float = 0.0
     easy_margin = False
 
+    # CLIP model setting
+    raw_embedding_size: int = 256
+    output_size: int = 64
+    # CLIP Hyperparameters
+    s_clip: float = 30.0
+    m_clip: float = 0.20
+    ls_eps_clip: float = 0.0
+    easy_margin = False
+
     # directories
     data_dir: str = '/media/volume4/130k-512x512-guie'
     save_path: str = '/media/volume4/130k-512x512-guie/ckpts'

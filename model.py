@@ -1,14 +1,24 @@
 from copy import deepcopy
 from collections import OrderedDict
 import warnings
+from multiprocessing import pool
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Parameter
+from torchvision import transforms
+
 import math
 import timm
 from config import Config
 
+import clip
+from clip.clip import _download, _MODELS
+
+clip_code = 'ViT-L/14@336px'
+model_path = _download(_MODELS[clip_code], os.path.expanduser("~/.cache/clip"))
+with open(model_path, 'rb') as opened_file:
+    clip_vit = torch.jit.load(opened_file, map_location="cuda:0").visual.eval()
 
 class GEM(nn.Module):
     """reference: https://amaarora.github.io/2020/08/30/gempool.html"""
@@ -143,7 +153,7 @@ class GUIEModel(nn.Module):
         # do not load head
         if model_state_dict["module.fc.weight"].shape != self.fc.weight.shape:
             valid_state_dict["module.fc.weight"] = self.fc.weight
-            warnings.warn(f"fc parameters are not loaded.", UserWarning) 
+            warnings.warn(f"fc parameters are not loaded.", UserWarning)
         # remove "module." in front of the keys
         valid_state_dict = OrderedDict(
             (k[7:], v) if k.startswith("module") else (k, v) \
@@ -167,4 +177,45 @@ class GUIEModel(nn.Module):
         pooled_features = features
         embedding = self.embedding_neck(pooled_features)
         embedding = F.normalize(embedding, p=2.0)
+        return embedding
+
+
+class CLIPModel(nn.Module):
+    def __init__(self, opts):
+        super(CLIPModel, self).__init__()
+        self.backbone = clip_vit
+        for param in self.backbone.parameters():
+            param.requires_grad = False
+        # self.backbone.requires_grad_(False)
+        #TODO:: maybe using features_only=True option seems better
+        # self.pooling = GEM()
+        in_features = self.backbone.num_features
+        self.dense = nn.Linear(in_features=in_features,
+                                out_features=opts.raw_embedding_size),
+        self.dropout = nn.Dropout(p=0.2)
+        self.fc = ArcMarginProduct(num_in_feats=opts.raw_embedding_size,
+                                   num_out_feats=opts.num_classes,
+                                   s=opts.s_clip,
+                                   m=opts.m_clip,
+                                   easy_margin=opts.easy_margin,
+                                   ls_eps=opts.ls_eps_clip)
+        self.softmax = nn.softmax()
+        self.avg = nn.AdaptiveAvgPool1d(opts.output_size)
+
+    def forward(self, images, labels):
+        features = self.backbone(images)
+        # pooled_features = self.pooling(features).flatten(1) # flatten dim>=1 part
+        # pooled_features = self.pooling(features)
+        pooled_features = self.dropout(features)
+        embedding_dense = self.dense(pooled_features)
+        embedding = self.fc(embedding_dense)
+        output = self.softmax(embedding, labels)
+        return output
+
+    def extract(self, images):
+        features = self.backbone(images)
+        # pooled_features = self.pooling(features).flatten(1)
+        pooled_features = self.dropout(features)
+        embedding_dense = self.dense(pooled_features)
+        embedding = self.avg(embedding_dense)
         return embedding
