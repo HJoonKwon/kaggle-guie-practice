@@ -40,6 +40,10 @@ sizes = {
     'swin_large_patch4_window12_384_in22k': (384, 384),
 }
 
+num_classes = {
+    'Images130k': 11,
+    'Imagenet1k': 1000
+}
 
 class ConfigType:
 
@@ -68,8 +72,13 @@ class ConfigType:
     start_epoch: int = 0
     epoch: int = 5
 
+    # dataset selection
+    # 1. Images130k
+    # 2. Imagenet1k
+    data_name: str = 'Images130k'
+
     # model setting
-    num_classes: int = 11
+    num_classes: int = num_classes[data_name]
     embedding_size: int = 256
     model_name: str = "swin_large_patch4_window12_384_in22k"  #"convnext"
     img_size: tuple = sizes[model_name]
@@ -80,7 +89,6 @@ class ConfigType:
     easy_margin = False
 
     # directories
-    data_name: str = 'Images130k'
     data_dir: str = '/media/volume4/130k-512x512-guie'
     save_path: str = '/media/volume4/130k-512x512-guie/ckpts'
     save_file_name: str = f'{model_name}_images130k'
