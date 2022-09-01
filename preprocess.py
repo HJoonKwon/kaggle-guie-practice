@@ -12,8 +12,35 @@ import re
 from config import Config
 from imagenet1k_classes import IMAGENET2012_CLASSES
 
+"""
+use dataset from https://www.kaggle.com/competitions/imagenet-object-localization-challenge/data
+follow the file structure as follows
+
+{DATA_ROOT_DIR}
+├── ILSVRC
+│   ├── Annotations
+│   │   └── CLS-LOC
+│   │       ├── train
+│   │       └── val
+│   ├── Data
+│   │   └── CLS-LOC
+│   │       ├── test
+│   │       ├── train
+│   │       └── val
+│   └── ImageSets
+│       └── CLS-LOC
+│           ├── test.txt
+│           ├── train_cls.txt
+│           ├── train_loc.txt
+│           └── val.txt
+├── LOC_sample_submission.csv
+├── LOC_synset_mapping.txt
+├── LOC_train_solution.csv
+└── LOC_val_solution.csv
+"""
 def preprocess_ImageNet1k() -> pd.DataFrame:
-    data_dir = Config.data_dir
+    data_dir = os.path.join(Config.data_dir, "ILSVRC", "Data", "CLS-LOC", "train")
+    meta_dir = os.path.join(Config.data_dir, "ILSVRC", "ImageSets", "CLS-LOC", "train_cls.txt")
 
     # validate data integrity
     n_class = 0
@@ -22,21 +49,37 @@ def preprocess_ImageNet1k() -> pd.DataFrame:
             assert dir_name in IMAGENET2012_CLASSES.keys()
             n_class += 1
     assert n_class == len(IMAGENET2012_CLASSES)
+    df = pd.read_csv(meta_dir, sep=" ", header=None, names=["label_and_image_name", "count"])
 
-    # create an empty DataFrame
-    df = pd.DataFrame(columns=["label_code", "image_name", "label"])
-    # and traverse every files in the dataset
-    for dir_name in tqdm(sorted(os.listdir(data_dir)), ncols=100):
-        if not re.search("n[0-9]{7,}", dir_name):
-            continue
-        for fn in os.listdir(os.path.join(data_dir, dir_name)):
-            if fn.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif')):
-                # DF columns : label_code | image_name | label
-                # ex) n1440764 | n01440764_11151.JPEG | tench, Tinca tinca
-                df.loc[len(df)] = dir_name, fn, IMAGENET2012_CLASSES[dir_name]
+    # read train metadata only
+    # TODO: read val & test splits as well (currently we split the train into train & val again)
+    # DF columns : label_code | image_name | label
+    # ex) n1440764 | n01440764_11151.JPEG | tench, Tinca tinca
+    tqdm.pandas()
+    tqdm.pandas(ncols=100, desc="obtaining label_code")
+    df["label_code"] = df.progress_apply(
+        lambda rec: rec['label_and_image_name'].split('/')[0],
+        axis=1
+        # label_code example: n01440764
+    )
+    tqdm.pandas(ncols=100, desc="obtaining image_name")
+    df["image_name"] = df.progress_apply(
+        lambda rec: rec['label_and_image_name'].split('/')[1] + ".JPEG",
+        axis=1
+        # assume images are given in JPEG format
+    )
+    tqdm.pandas(ncols=100, desc="obtaining label")
+    df["label"] = df.progress_apply(
+        lambda rec: IMAGENET2012_CLASSES[rec['label_code']],
+        axis=1
+    )
+
+    # remove unnecessary columns
+    df = df.drop(["label_and_image_name", "count"], axis=1)
 
     # add file_path column
-    df['file_path'] = df.apply(
+    tqdm.pandas(ncols=100, desc="obtaining file_path")
+    df['file_path'] = df.progress_apply(
         lambda rec: os.path.join(data_dir, rec['label_code'], rec['image_name']),
         axis=1
         # file_path example: ../ImageNet1k/n01440764/n01440764_11151.JPEG
@@ -68,6 +111,25 @@ def preprocess_ImageNet1k() -> pd.DataFrame:
     
 
 # ------------------------------------------------------
+
+"""
+use dataset from https://www.kaggle.com/datasets/rhtsingh/130k-images-512x512-universal-image-embeddings
+follow the file structure as follows
+
+{DATA_ROOT_DIR}
+├── apparel
+├── artwork
+├── cars
+├── dishes
+├── furniture
+├── illustrations
+├── landmark
+├── meme
+├── packaged
+├── storefronts
+├── toys
+└── train.csv
+"""
 
 def read_data_Images130k() -> pd.DataFrame:
     data_dir = Config.data_dir
