@@ -10,13 +10,14 @@ from torchvision import transforms
 
 import math
 import timm
-from config import Config
+from config import Config, clip_models
 
+import os
 import clip
 from clip.clip import _download, _MODELS
 
-clip_code = 'ViT-L/14@336px'
-model_path = _download(_MODELS[clip_code], os.path.expanduser("~/.cache/clip"))
+clip_version = 'ViT-L/14@336px'
+model_path = _download(clip_models[clip_version], os.path.expanduser("~/.cache/clip"))
 with open(model_path, 'rb') as opened_file:
     clip_vit = torch.jit.load(opened_file, map_location="cuda:0").visual.eval()
 
