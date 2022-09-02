@@ -104,13 +104,13 @@ class ConfigType:
     easy_margin = False
 
     # CLIP model setting
+    clip_version = 'ViT-L/14@336px'
     raw_embedding_size: int = 256
     output_size: int = 64
     # CLIP Hyperparameters
     s_clip: float = 30.0
     m_clip: float = 0.20
     ls_eps_clip: float = 0.0
-    easy_margin = False
 
     # directories
     data_dir: str = '/media/volume4/130k-512x512-guie'

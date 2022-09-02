@@ -8,18 +8,10 @@ import torch.nn.functional as F
 from torch.nn import Parameter
 from torchvision import transforms
 
+import os
 import math
 import timm
-from config import Config, clip_models
-
-import os
-import clip
-from clip.clip import _download, _MODELS
-
-clip_version = 'ViT-L/14@336px'
-model_path = _download(clip_models[clip_version], os.path.expanduser("~/.cache/clip"))
-with open(model_path, 'rb') as opened_file:
-    clip_vit = torch.jit.load(opened_file, map_location="cuda:0").visual.eval()
+from utils import load_clip_backbone
 
 class GEM(nn.Module):
     """reference: https://amaarora.github.io/2020/08/30/gempool.html"""
@@ -184,12 +176,9 @@ class GUIEModel(nn.Module):
 class CLIPModel(nn.Module):
     def __init__(self, opts):
         super(CLIPModel, self).__init__()
-        self.backbone = clip_vit
+        self.backbone = load_clip_backbone(opts)
         for param in self.backbone.parameters():
             param.requires_grad = False
-        # self.backbone.requires_grad_(False)
-        #TODO:: maybe using features_only=True option seems better
-        # self.pooling = GEM()
         in_features = self.backbone.num_features
         self.dense = nn.Linear(in_features=in_features,
                                 out_features=opts.raw_embedding_size),
@@ -205,8 +194,6 @@ class CLIPModel(nn.Module):
 
     def forward(self, images, labels):
         features = self.backbone(images)
-        # pooled_features = self.pooling(features).flatten(1) # flatten dim>=1 part
-        # pooled_features = self.pooling(features)
         pooled_features = self.dropout(features)
         embedding_dense = self.dense(pooled_features)
         embedding = self.fc(embedding_dense)
@@ -215,7 +202,6 @@ class CLIPModel(nn.Module):
 
     def extract(self, images):
         features = self.backbone(images)
-        # pooled_features = self.pooling(features).flatten(1)
         pooled_features = self.dropout(features)
         embedding_dense = self.dense(pooled_features)
         embedding = self.avg(embedding_dense)
