@@ -146,7 +146,7 @@ def get_dataloaders(df: pd.DataFrame, alb_transforms: dict, opts: ConfigType):
 
 def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
     local_gpu_id = init_for_distributed(rank, opts)
-    is_master = local_gpu_id == 0
+    is_master = local_gpu_id == opts.gpu_ids[0]
 
     # wandb log
     do_log = run is not None
