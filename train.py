@@ -27,7 +27,6 @@ from preprocess import preprocess_main
 from utils import init_for_distributed, setup_for_distributed
 
 ##TODO:: different model output for training/inference (https://www.kaggle.com/code/motono0223/guie-clip-tensorflow-train-example/notebook)
-##TODO:: add syncbatchnorm at linear projection?
 ##TODO:: best model? (selected metric by user)
 ##TODO:: train_one_epoch/ evaluate function
 
