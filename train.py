@@ -161,7 +161,7 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
     model = DDP(module=model, device_ids=[local_gpu_id])
 
     # watch gradients for rank0
-    if is_master:
+    if is_master and do_log:
         run.watch(model)
 
     # criterion
@@ -201,15 +201,14 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
             toc = time.time()
 
             # visualization
+            bar.set_description(
+                f"Epoch [{epoch}/{opts.epoch}], Loss: {loss.item():.4f}, "
+                f"LR: {lr:.5f}, Time: {toc-tic:.2f}")
             if (step % opts.vis_step == 0
                     or step == len(train_loader) - 1) and opts.rank == 0:
-
-                bar.set_description(
-                    f"Epoch [{epoch}/{opts.epoch}], Iter [{step}/{len(train_loader)-1}], Loss: {loss.item():.4f}, "
-                    f"LR: {lr:.5f}, Time: {toc-tic:.2f}")
-
                 if do_log:
                     run.log({"train_loss": loss.item()})
+                    run.log({"LR": lr})
 
         if do_log:
             run.log({
@@ -250,7 +249,8 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
             total = 0
 
             with torch.no_grad():
-                bar = tqdm(enumerate(valid_loader), total=len(valid_loader))
+                bar = tqdm(enumerate(valid_loader), total=len(valid_loader), \
+                    ncols=150, desc="validation in progress")
                 for step, (images, labels) in bar:
                     images = images.to(local_gpu_id)
                     labels = labels.to(local_gpu_id)
