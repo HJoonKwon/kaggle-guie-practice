@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 sizes = {
     # EfficientNet
@@ -68,6 +68,7 @@ class ConfigType:
     fold: int = 1
 
     # traning setting
+    load_from: Optional[str] = None
     n_accumulate: int = 1
     start_epoch: int = 0
     epoch: int = 5

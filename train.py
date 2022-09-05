@@ -158,6 +158,10 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
     # model
     model = GUIEModel(opts)
     model = model.cuda(local_gpu_id)
+    if opts.load_from is not None:
+        ckpt_data = torch.load(opts.load_from, map_location=next(model.parameters()).device)
+        model.load_model(ckpt_data['model_state_dict'])
+        print(f"load model from {opts.load_from} is completed")
     model = DDP(module=model, device_ids=[local_gpu_id])
 
     # watch gradients for rank0

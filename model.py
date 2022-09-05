@@ -1,3 +1,6 @@
+from copy import deepcopy
+from collections import OrderedDict
+import warnings
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -132,6 +135,21 @@ class GUIEModel(nn.Module):
                                    m=opts.m,
                                    easy_margin=opts.easy_margin,
                                    ls_eps=opts.ls_eps)
+
+    # call this function before wrapping with DDP
+    def load_model(self, model_state_dict):
+        valid_state_dict = deepcopy(model_state_dict)
+        # if the dimension of head (number of classes) does not match,
+        # do not load head
+        if model_state_dict["module.fc.weight"].shape != self.fc.weight.shape:
+            valid_state_dict["module.fc.weight"] = self.fc.weight
+            warnings.warn(f"fc parameters are not loaded.", UserWarning) 
+        # remove "module." in front of the keys
+        valid_state_dict = OrderedDict(
+            (k[7:], v) if k.startswith("module") else (k, v) \
+                for k, v in valid_state_dict.items()
+        )
+        self.load_state_dict(valid_state_dict)
 
     def forward(self, images, labels):
         features = self.backbone(images)
