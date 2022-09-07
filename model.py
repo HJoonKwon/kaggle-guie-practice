@@ -205,4 +205,5 @@ class CLIPModel(nn.Module):
         pooled_features = self.dropout(features)
         embedding_dense = self.dense(pooled_features)
         embedding = self.avg(embedding_dense)
+        embedding = F.normalize(embedding, p=2.0)
         return embedding
