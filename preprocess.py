@@ -13,6 +13,10 @@ from config import Config
 from imagenet1k_classes import IMAGENET2012_CLASSES
 
 # TODO: wrap label encoding with a integrated function
+# TODO: add comments regarding the final dataframe format
+# TODO: save class(inv) mapping at ckpt directory
+# TODO: use inplace operation for drop, unify description msg
+# TODO: split preprocessing of each dataset into separated files
 
 """
 use dataset from https://www.kaggle.com/competitions/imagenet-object-localization-challenge/data
@@ -263,6 +267,72 @@ def preprocess_google_landmark_2021() -> pd.DataFrame:
 
     return df
 
+# ------------------------------------------------------
+"""
+use dataset from https://www.kaggle.com/competitions/products-10k
+follow the file structure as follows
+
+{DATA_ROOT_DIR}
+├── test
+├── train
+└── train.csv
+"""
+
+def preprocess_Product10k() -> pd.DataFrame:
+    data_dir = os.path.join(Config.data_dir, "train")
+    meta_dir = os.path.join(Config.data_dir, "train.csv")
+
+    # read train metadata
+    df = pd.read_csv(meta_dir, sep=",", header=1, names=["name", "class", "group"])
+
+    # check whether class is unique regardless of the group in whicn the record is included
+    class_list = df["class"].unique().tolist()
+    for class_label in class_list:
+        assert len(df["group"][df["class"] == class_label].unique().tolist()) == 1
+
+    tqdm.pandas(ncols=100, desc="renaming label")
+    df["label"] = df.progress_apply(
+        lambda rec: "product_" + str(rec["class"]),
+        axis=1
+    )
+    tqdm.pandas(ncols=100, desc="renaming group")
+    df["category1"] = df.progress_apply(
+        lambda rec: "product_group_" + str(rec["group"]),
+        axis=1
+    )
+
+    tqdm.pandas(ncols=100, desc="obtaining file_path")
+    df['file_path'] = df.progress_apply(
+        lambda rec: os.path.join(data_dir, rec["name"]),
+        axis=1
+    )
+
+    # remove unnecessary columns
+    df.drop(["name", "class", "group"], axis=1, inplace=True)
+
+    # encode label
+    encoder = LabelEncoder()
+    df["label_id"] = encoder.fit_transform(df['label'])
+
+    class_mappings = {}
+    class_inv_mappings = {}
+    labels = df['label'].unique()
+    for label in labels:
+        label_id = list(df[df['label'] == label]['label_id'])[0]
+        class_mappings[label] = label_id
+        class_inv_mappings[label_id] = label
+
+    data_dir = Config.data_dir
+    class_mapping_path = os.path.join(data_dir, "class_mapping.json")
+    class_inv_mapping_path = os.path.join(data_dir, "class_inv_mapping.json")
+
+    with open(class_mapping_path, "wt") as f:
+        json.dump(class_mappings, f)
+
+    with open(class_inv_mapping_path, "wt") as f:
+        json.dump(class_inv_mappings, f)
+
+    return df
 
 # ------------------------------------------------------
 
@@ -275,6 +345,8 @@ def preprocess_main() -> pd.DataFrame:
         return preprocess_ImageNet1k()
     elif Config.data_name.lower() == "google-landmark-2021":
         return preprocess_google_landmark_2021()
+    elif Config.data_name.lower() == "product10k":
+        return preprocess_Product10k()
     else:
         raise ValueError(f"dataset {Config.data_name} is not supported")
 

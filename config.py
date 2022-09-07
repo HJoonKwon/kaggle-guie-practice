@@ -43,7 +43,8 @@ sizes = {
 num_classes = {
     'Images130k': 11,
     'Imagenet1k': 1000,
-    'Google-Landmark-2021': 1000
+    'Google-Landmark-2021': 81313,
+    'Product10k': 9691
 }
 
 class ConfigType:
@@ -78,7 +79,7 @@ class ConfigType:
     # 1. Images130k
     # 2. Imagenet1k
     # 3. Google-Landmark-2021
-    data_name: str = 'Images130k'
+    # 4. Product10k
 
     # model setting
     num_classes: int = num_classes[data_name]
