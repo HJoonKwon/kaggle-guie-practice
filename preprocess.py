@@ -336,6 +336,68 @@ def preprocess_Product10k() -> pd.DataFrame:
 
 # ------------------------------------------------------
 
+"""
+use dataset from https://www.kaggle.com/datasets/agrigorev/clothing-dataset-full
+follow the file structure as follows
+
+{DATA_ROOT_DIR}
+├── images.csv
+├── images_compressed
+└── images_original
+"""
+
+def preprocess_ClothingDataset() -> pd.DataFrame:
+    data_dir = os.path.join(Config.data_dir, "images_original")
+    meta_dir = os.path.join(Config.data_dir, "images.csv")
+
+    # read metadata
+    df = pd.read_csv(meta_dir)
+    # remove unnecessary columns and rows
+    df.drop(["sender_id", "kids"], axis=1, inplace=True)
+    df.drop((df["label"] == "Not sure").index, inplace=True)
+    df.drop((df["label"] == "Other").index, inplace=True)
+    df.drop((df["label"] == "Skip").index, inplace=True)
+    # remaining labels are
+    #   'T-Shirt', 'Shoes', 'Shorts', 'Shirt', 'Pants',
+    #   'Skirt', 'Top', 'Outwear', 'Dress', 'Body',
+    #   'Longsleeve', 'Undershirt', 'Hat', 'Polo', 'Blouse',
+    #   'Hoodie', 'Blazer'
+    # rename column
+    df.rename({"image": "image_name"}, inplace=True)
+
+    # add file path column
+    tqdm.pandas(ncols=100, desc="obtaining file_path")
+    df["file_path"] = df.progress_apply(
+        lambda rec: os.path.join(data_dir, rec["image"] + ".jpg"),
+        axis=1
+    )
+
+    # encode label
+    encoder = LabelEncoder()
+    df["label_id"] = encoder.fit_transform(df['label'])
+
+    class_mappings = {}
+    class_inv_mappings = {}
+    labels = df['label'].unique()
+    for label in labels:
+        label_id = list(df[df['label'] == label]['label_id'])[0]
+        class_mappings[label] = label_id
+        class_inv_mappings[label_id] = label
+
+    data_dir = Config.data_dir
+    class_mapping_path = os.path.join(data_dir, "class_mapping.json")
+    class_inv_mapping_path = os.path.join(data_dir, "class_inv_mapping.json")
+
+    with open(class_mapping_path, "wt") as f:
+        json.dump(class_mappings, f)
+
+    with open(class_inv_mapping_path, "wt") as f:
+        json.dump(class_inv_mappings, f)
+
+    return df
+
+# ------------------------------------------------------
+
 
 def preprocess_main() -> pd.DataFrame:
     print(f"Processing {Config.data_name} started")
@@ -347,6 +409,8 @@ def preprocess_main() -> pd.DataFrame:
         return preprocess_google_landmark_2021()
     elif Config.data_name.lower() == "product10k":
         return preprocess_Product10k()
+    elif Config.data_name.lower() == "clothing-dataset":
+        return preprocess_ClothingDataset()
     else:
         raise ValueError(f"dataset {Config.data_name} is not supported")
 

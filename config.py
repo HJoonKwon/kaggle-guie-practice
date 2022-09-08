@@ -44,7 +44,8 @@ num_classes = {
     'Images130k': 11,
     'Imagenet1k': 1000,
     'Google-Landmark-2021': 81313,
-    'Product10k': 9691
+    'Product10k': 9691,
+    'Clothing-Dataset': 17
 }
 
 class ConfigType:
@@ -80,6 +81,8 @@ class ConfigType:
     # 2. Imagenet1k
     # 3. Google-Landmark-2021
     # 4. Product10k
+    # 5. Clothing-Dataset
+    data_name: str = 'Images130k'
 
     # model setting
     num_classes: int = num_classes[data_name]
