@@ -354,23 +354,25 @@ def preprocess_ClothingDataset() -> pd.DataFrame:
     df = pd.read_csv(meta_dir)
     # remove unnecessary columns and rows
     df.drop(["sender_id", "kids"], axis=1, inplace=True)
-    df.drop((df["label"] == "Not sure").index, inplace=True)
-    df.drop((df["label"] == "Other").index, inplace=True)
-    df.drop((df["label"] == "Skip").index, inplace=True)
+    df.drop(df[df["label"] == "Not sure"].index, inplace=True)
+    df.drop(df[df["label"] == "Other"].index, inplace=True)
+    df.drop(df[df["label"] == "Skip"].index, inplace=True)
+    df.reset_index(inplace=True)
     # remaining labels are
     #   'T-Shirt', 'Shoes', 'Shorts', 'Shirt', 'Pants',
     #   'Skirt', 'Top', 'Outwear', 'Dress', 'Body',
     #   'Longsleeve', 'Undershirt', 'Hat', 'Polo', 'Blouse',
     #   'Hoodie', 'Blazer'
     # rename column
-    df.rename({"image": "image_name"}, inplace=True)
+    df.rename({"image": "image_name"}, axis=1, inplace=True)
 
     # add file path column
     tqdm.pandas(ncols=100, desc="obtaining file_path")
     df["file_path"] = df.progress_apply(
-        lambda rec: os.path.join(data_dir, rec["image"] + ".jpg"),
+        lambda rec: os.path.join(data_dir, rec["image_name"] + ".jpg"),
         axis=1
     )
+    df.drop(["image_name"], axis=1, inplace=True)
 
     # encode label
     encoder = LabelEncoder()
