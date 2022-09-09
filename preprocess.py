@@ -11,6 +11,7 @@ import re
 
 from config import Config
 from imagenet1k_classes import IMAGENET2012_CLASSES
+from hnm_classes import HNM_UNIFIED_CLASS_MAPPING
 
 # TODO: wrap label encoding with a integrated function
 # TODO: add comments regarding the final dataframe format
@@ -399,6 +400,71 @@ def preprocess_ClothingDataset() -> pd.DataFrame:
     return df
 
 # ------------------------------------------------------
+"""
+use dataset from https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data
+follow the file structure as follows
+
+{DATA_ROOT_DIR}
+├── articles.csv
+└── images
+"""
+
+def preprocess_HnMFashionDataset() -> pd.DataFrame:
+    data_dir = os.path.join(Config.data_dir, "images")
+    meta_dir = os.path.join(Config.data_dir, "articles.csv")
+
+    # read metadata
+    df = pd.read_csv(meta_dir, usecols=["article_id", "product_type_name"])
+    # map existing classes into unified classes
+    tqdm.pandas(ncols=100, desc="obtaining label")
+    df["label"] = df.progress_apply(
+        lambda rec: HNM_UNIFIED_CLASS_MAPPING[rec['product_type_name']],
+        axis=1
+    )
+    # remove invalid records
+    df.drop(
+        df[(df.label == "None") | (df.label == "Unclassified")].index,
+        inplace=True
+    )
+    df.reset_index(inplace=True)
+    # add file path column
+    tqdm.pandas(ncols=100, desc="obtaining file_path")
+    df["file_path"] = df.progress_apply(
+        lambda rec: os.path.join(data_dir, "0" + str(rec["article_id"])[:2], "0" + str(rec["article_id"]) + ".jpg"),
+        axis=1
+    )
+
+    # remove unnecessary columns
+    df.drop(
+        ["article_id"],
+        axis=1,
+        inplace=True
+    )
+
+    # encode label
+    encoder = LabelEncoder()
+    df["label_id"] = encoder.fit_transform(df['label'])
+
+    class_mappings = {}
+    class_inv_mappings = {}
+    labels = df['label'].unique()
+    for label in labels:
+        label_id = list(df[df['label'] == label]['label_id'])[0]
+        class_mappings[label] = label_id
+        class_inv_mappings[label_id] = label
+
+    data_dir = Config.data_dir
+    class_mapping_path = os.path.join(data_dir, "class_mapping.json")
+    class_inv_mapping_path = os.path.join(data_dir, "class_inv_mapping.json")
+
+    with open(class_mapping_path, "wt") as f:
+        json.dump(class_mappings, f)
+
+    with open(class_inv_mapping_path, "wt") as f:
+        json.dump(class_inv_mappings, f)
+
+    return df
+# ------------------------------------------------------
 
 
 def preprocess_main() -> pd.DataFrame:
@@ -413,6 +479,8 @@ def preprocess_main() -> pd.DataFrame:
         return preprocess_Product10k()
     elif Config.data_name.lower() == "clothing-dataset":
         return preprocess_ClothingDataset()
+    elif Config.data_name.lower() == "hnm-fashion-dataset":
+        return preprocess_HnMFashionDataset()
     else:
         raise ValueError(f"dataset {Config.data_name} is not supported")
 

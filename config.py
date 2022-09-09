@@ -45,7 +45,8 @@ num_classes = {
     'Imagenet1k': 1000,
     'Google-Landmark-2021': 81313,
     'Product10k': 9691,
-    'Clothing-Dataset': 17
+    'Clothing-Dataset': 17,
+    'HnM-Fashion-Dataset': 20
 }
 
 class ConfigType:
@@ -82,6 +83,7 @@ class ConfigType:
     # 3. Google-Landmark-2021
     # 4. Product10k
     # 5. Clothing-Dataset
+    # 6. HnM-Fashion-Dataset
     data_name: str = 'Images130k'
 
     # model setting
