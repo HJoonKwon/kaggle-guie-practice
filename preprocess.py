@@ -157,9 +157,9 @@ def preprocess_label_Images130k(df: pd.DataFrame) -> pd.DataFrame:
         class_mappings[label] = label_id
         class_inv_mappings[label_id] = label
 
-    data_dir = Config.data_dir
-    class_mapping_path = os.path.join(data_dir, "class_mapping.json")
-    class_inv_mapping_path = os.path.join(data_dir, "class_inv_mapping.json")
+    work_dir = Config.work_dir
+    class_mapping_path = os.path.join(work_dir, "class_mapping.json")
+    class_inv_mapping_path = os.path.join(work_dir, "class_inv_mapping.json")
 
     with open(class_mapping_path, "wt") as f:
         json.dump(class_mappings, f)

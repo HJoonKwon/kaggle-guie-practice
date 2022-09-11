@@ -116,6 +116,7 @@ class ConfigType:
     data_dir: str = '/media/volume4/130k-512x512-guie'
     save_path: str = '/media/volume4/130k-512x512-guie/ckpts'
     save_file_name: str = f'{model_name}_images130k'
+    work_dir: str = 'work_dirs'
 
     # multi-gpu setting
     gpu_ids: List[str] = ["0", "1", "2", "3"]
