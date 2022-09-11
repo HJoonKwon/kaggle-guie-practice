@@ -43,7 +43,7 @@ def preprocess_HnMFashionDataset(opt: DataConfigType) -> pd.DataFrame:
     df = pd.read_csv(meta_dir, usecols=["article_id", "product_type_name"])
 
     # map existing classes into unified classes
-    tqdm.pandas(ncols=100, desc="obtaining label (1/2)")
+    tqdm.pandas(ncols=100, desc="obtaining label (1/3)")
     df["label"] = df.progress_apply(
         lambda rec: HNM_UNIFIED_CLASS_MAPPING[rec['product_type_name']],
         axis=1
@@ -57,21 +57,33 @@ def preprocess_HnMFashionDataset(opt: DataConfigType) -> pd.DataFrame:
         ].index,
         inplace=True
     )
-    df.reset_index(inplace=True)
+    df.reset_index(inplace=True, drop=True)
 
     # add file_path column
-    tqdm.pandas(ncols=100, desc="obtaining file_path (2/2)")
+    tqdm.pandas(ncols=100, desc="obtaining file_path (2/3)")
     df["file_path"] = df.progress_apply(
         lambda rec: os.path.join(data_dir, "0" + str(rec["article_id"])[:2], "0" + str(rec["article_id"]) + ".jpg"),
         axis=1
     )
+
+    # remove records whose images are missing
+    tqdm.pandas(ncols=100, desc="removing missing images (3/3)")
+    df["file_exist"] = df.progress_apply(
+        lambda rec: os.path.exists(rec["file_path"]),
+        axis=1
+    )
+    df.drop(
+        df[df.file_exist == False].index,
+        inplace=True
+    )
+    df.reset_index(inplace=True, drop=True)
 
     # add supercategory column
     df["supercategory"] = "apparel"
 
     # remove unnecessary columns
     df.drop(
-        ["index", "article_id"],
+        ["article_id", "file_exist"],
         axis=1,
         inplace=True
     )
