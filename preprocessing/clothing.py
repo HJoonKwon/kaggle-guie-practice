@@ -40,7 +40,7 @@ def preprocess_ClothingDataset(opt: DataConfigType) -> pd.DataFrame:
         ].index,
         inplace=True
     )
-    df.reset_index(inplace=True)
+    df.reset_index(inplace=True, drop=True)
 
     # add file path column
     tqdm.pandas(ncols=100, desc="obtaining file_path (1/1)")
@@ -54,7 +54,7 @@ def preprocess_ClothingDataset(opt: DataConfigType) -> pd.DataFrame:
 
     # remove unnecessary column
     df.drop(
-        ["index", "image", "sender_id", "kids"],
+        ["image", "sender_id", "kids"],
         axis=1,
         inplace=True
     )
