@@ -20,8 +20,8 @@ return:
 """
 
 def preprocess_Product10k(opt: DataConfigType) -> pd.DataFrame:
-    data_dir = os.path.join(opt.data_dir, "train")
-    meta_dir = os.path.join(opt.data_dir, "train.csv")
+    data_dir = os.path.join(opt["data_dir"], "train")
+    meta_dir = os.path.join(opt["data_dir"], "train.csv")
 
     # read train metadata
     df = pd.read_csv(meta_dir)

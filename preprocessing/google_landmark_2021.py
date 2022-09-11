@@ -43,8 +43,8 @@ return:
 """
 
 def preprocess_google_landmark_2021(opt: DataConfigType) -> pd.DataFrame:
-    data_dir = os.path.join(opt.data_dir, "train")
-    meta_path = os.path.join(opt.data_dir, "train.csv")
+    data_dir = os.path.join(opt["data_dir"], "train")
+    meta_path = os.path.join(opt["data_dir"], "train.csv")
 
     # read train metadata
     df = pd.read_csv(meta_path, sep=",", header=1, names=["image_name", "landmark_id"])

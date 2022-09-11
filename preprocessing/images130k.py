@@ -28,7 +28,7 @@ return:
 """
 
 def preprocess_Images130k(opt: DataConfigType) -> pd.DataFrame:
-    data_dir = opt.data_dir
+    data_dir = opt["data_dir"]
     meta_dir = os.path.join(data_dir, "train.csv")
 
     # read meta data

@@ -36,8 +36,8 @@ list of labels (total 20 valid categories):
 """
 
 def preprocess_HnMFashionDataset(opt: DataConfigType) -> pd.DataFrame:
-    data_dir = os.path.join(opt.data_dir, "images")
-    meta_dir = os.path.join(opt.data_dir, "articles.csv")
+    data_dir = os.path.join(opt["data_dir"], "images")
+    meta_dir = os.path.join(opt["data_dir"], "articles.csv")
 
     # read metadata (use only "article_id" and "product_type_name" columns)
     df = pd.read_csv(meta_dir, usecols=["article_id", "product_type_name"])

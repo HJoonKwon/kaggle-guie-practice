@@ -25,8 +25,8 @@ list of labels (total 17 categories):
 """
 
 def preprocess_ClothingDataset(opt: DataConfigType) -> pd.DataFrame:
-    data_dir = os.path.join(opt.data_dir, "images_original")
-    meta_dir = os.path.join(opt.data_dir, "images.csv")
+    data_dir = os.path.join(opt["data_dir"], "images_original")
+    meta_dir = os.path.join(opt["data_dir"], "images.csv")
 
     # read metadata
     df = pd.read_csv(meta_dir)

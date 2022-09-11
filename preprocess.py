@@ -14,21 +14,22 @@ from preprocessing.hnm import preprocess_HnMFashionDataset
 
 
 def get_dataframe_from_single_dataset(opt: DataConfigType) ->pd.DataFrame:
-    print(f"Processing {opt.data_name} started")
-    if opt.data_name.lower() == "images130k":
+    data_name = opt["data_name"]
+    print(f"Processing {data_name} started")
+    if data_name.lower() == "images130k":
         return preprocess_Images130k(opt)
-    elif opt.data_name.lower() == "imagenet1k":
+    elif data_name.lower() == "imagenet1k":
         return preprocess_ImageNet1k(opt)
-    elif opt.data_name.lower() == "google-landmark-2021":
+    elif data_name.lower() == "google-landmark-2021":
         return preprocess_google_landmark_2021(opt)
-    elif opt.data_name.lower() == "product10k":
+    elif data_name.lower() == "product10k":
         return preprocess_Product10k(opt)
-    elif opt.data_name.lower() == "clothing-dataset":
+    elif data_name.lower() == "clothing-dataset":
         return preprocess_ClothingDataset(opt)
-    elif opt.data_name.lower() == "hnm-fashion-dataset":
+    elif data_name.lower() == "hnm-fashion-dataset":
         return preprocess_HnMFashionDataset(opt)
     else:
-        raise ValueError(f"dataset {opt.data_name} is not supported")
+        raise ValueError(f"dataset {data_name} is not supported")
 
 
 def preprocess_main() -> pd.DataFrame:

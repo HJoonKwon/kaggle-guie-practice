@@ -36,8 +36,8 @@ return:
     ex) n1440764 | tench, Tinca tinca | .../ImageNet1k/n01440764/n01440764_11151.JPEG
 """
 def preprocess_ImageNet1k(opt: DataConfigType) -> pd.DataFrame:
-    data_dir = os.path.join(opt.data_dir, "ILSVRC", "Data", "CLS-LOC", "train")
-    meta_dir = os.path.join(opt.data_dir, "ILSVRC", "ImageSets", "CLS-LOC", "train_cls.txt")
+    data_dir = os.path.join(opt["data_dir"], "ILSVRC", "Data", "CLS-LOC", "train")
+    meta_dir = os.path.join(opt["data_dir"], "ILSVRC", "ImageSets", "CLS-LOC", "train_cls.txt")
 
     # validate data integrity
     n_class = 0
