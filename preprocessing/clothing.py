@@ -14,8 +14,8 @@ follow the file structure as follows
 └── images_original
 
 return:
-    DataFrame of columns: label | file_path
-    ex) T-shirt | ../clothing-dataset-full/images_original/ea7b6656-3f84-4eb3-9099-23e623fc1018.jpg
+    DataFrame of columns: label | file_path | supercategory
+    ex) T-shirt | ../clothing-dataset-full/images_original/ea7b6656-3f84-4eb3-9099-23e623fc1018.jpg | apparel
 
 list of labels (total 17 categories):
     'T-Shirt', 'Shoes', 'Shorts', 'Shirt', 'Pants',
@@ -48,6 +48,9 @@ def preprocess_ClothingDataset(opt: DataConfigType) -> pd.DataFrame:
         lambda rec: os.path.join(data_dir, rec["image"] + ".jpg"),
         axis=1
     )
+
+    # add supercategory column
+    df["supercategory"] = "apparel"
 
     # remove unnecessary column
     df.drop(

@@ -5,7 +5,7 @@ import pandas as pd
 from preprocessing.data_config import DataConfigType
 
 """
-use dataset from https://www.kaggle.com/competitions/products-10k
+use dataset from https://www.kaggle.com/competitions/products-10k/data
 follow the file structure as follows
 
 {DATA_ROOT_DIR}
@@ -14,8 +14,8 @@ follow the file structure as follows
 └── train.csv
 
 return:
-    DataFrame of columns: label | product_group | file_path
-    ex) product_0 | product_group_0 | .../Product10k/train/1.jpg
+    DataFrame of columns: label | product_group | file_path | supercategory
+    ex) product_0 | product_group_0 | .../Product10k/train/1.jpg | packaged
     (It is guaranteed that label is unique across the product_group)
 """
 

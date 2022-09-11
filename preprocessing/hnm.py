@@ -14,8 +14,8 @@ follow the file structure as follows
 └── images
 
 return:
-    DataFrame of columns: product_type_name | label | file_path
-    ex) Vest top | Top | .../h-and-m-personalized-fashion-recommendations/images/010/0108775015.jpg
+    DataFrame of columns: product_type_name | label | file_path | supercategory
+    ex) Vest top | Top | .../h-and-m-personalized-fashion-recommendations/images/010/0108775015.jpg | apparel
 
 list of labels (total 20 valid categories):
     (17 categories are in common with the labels of clothing dataset)
@@ -31,6 +31,8 @@ list of labels (total 20 valid categories):
     'Unclassified': included in the supercategory "apparel", but not sure in which label included
     'None': not even included in the supercategory "apparel"
 
+    TODO: use Unclassified if user selects supercategory as label
+    TODO: give other supercategory to None
 """
 
 def preprocess_HnMFashionDataset(opt: DataConfigType) -> pd.DataFrame:
@@ -63,6 +65,9 @@ def preprocess_HnMFashionDataset(opt: DataConfigType) -> pd.DataFrame:
         lambda rec: os.path.join(data_dir, "0" + str(rec["article_id"])[:2], "0" + str(rec["article_id"]) + ".jpg"),
         axis=1
     )
+
+    # add supercategory column
+    df["supercategory"] = "apparel"
 
     # remove unnecessary columns
     df.drop(

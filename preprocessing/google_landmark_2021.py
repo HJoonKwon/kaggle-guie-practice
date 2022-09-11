@@ -38,8 +38,8 @@ follow the file structure as follows
 (test, index, sample_submission.csv are not required)
 
 return:
-    DataFrame of columns: label | file_path
-    ex) landmark_0 | .../landmark-retrieval-2021/train/9/2/b/92b6290d571448f6.jpg
+    DataFrame of columns: label | file_path | supercategory
+    ex) landmark_0 | .../landmark-retrieval-2021/train/9/2/b/92b6290d571448f6.jpg | landmark
 """
 
 def preprocess_google_landmark_2021(opt: DataConfigType) -> pd.DataFrame:
@@ -70,6 +70,9 @@ def preprocess_google_landmark_2021(opt: DataConfigType) -> pd.DataFrame:
         axis=1
         # file_path example: ../landmark-retrieval-2021/train/1/7/6/17660ef415d37059.jpg
     )
+
+    # add supercategory column
+    df["supercategory"] = "landmark"
 
     # remove unnecessary columns
     df.drop(
