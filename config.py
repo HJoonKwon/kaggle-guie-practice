@@ -1,4 +1,5 @@
 from typing import List, Optional
+from preprocessing.data_config import NUM_CLASSES
 
 sizes = {
     # EfficientNet
@@ -40,14 +41,6 @@ sizes = {
     'swin_large_patch4_window12_384_in22k': (384, 384),
 }
 
-num_classes = {
-    'Images130k': 11,
-    'Imagenet1k': 1000,
-    'Google-Landmark-2021': 81313,
-    'Product10k': 9691,
-    'Clothing-Dataset': 17,
-    'HnM-Fashion-Dataset': 20
-}
 
 class ConfigType:
 
@@ -87,7 +80,7 @@ class ConfigType:
     data_name: str = 'Images130k'
 
     # model setting
-    num_classes: int = num_classes[data_name]
+    num_classes: int = NUM_CLASSES[data_name]
     embedding_size: int = 256
     model_name: str = "swin_large_patch4_window12_384_in22k"  #"convnext"
     img_size: tuple = sizes[model_name]
