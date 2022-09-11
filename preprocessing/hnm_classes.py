@@ -1,8 +1,3 @@
-# 'T-Shirt', 'Shoes', 'Shorts', 'Shirt', 'Pants', 'Skirt', 'Top', 'Outwear', 'Dress', 'Body', 'Longsleeve', 'Undershirt', 'Hat', 'Polo', 'Blouse', 'Hoodie', 'Blazer'
-# 'Underwear', 'Accessories', 'Bag'
-
-# 'Unclassified' and 'None' should be removed
-
 HNM_UNIFIED_CLASS_MAPPING = {
     'Vest top': 'Top',
     'Bra': 'Underwear',
