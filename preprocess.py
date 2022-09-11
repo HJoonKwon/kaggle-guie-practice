@@ -1,489 +1,70 @@
-# generate dataframe for training/evaluation
-# img_id | file_path | label_id
-#    0     data/a.jpg   N0100213 (imagenet)
-
 import os
-from tqdm import tqdm
 import json
 from sklearn.preprocessing import LabelEncoder
 import pandas as pd
-import re
-
 from config import Config
-from imagenet1k_classes import IMAGENET2012_CLASSES
-from hnm_classes import HNM_UNIFIED_CLASS_MAPPING
 
-# TODO: wrap label encoding with a integrated function
-# TODO: add comments regarding the final dataframe format
-# TODO: save class(inv) mapping at ckpt directory
-# TODO: use inplace operation for drop, unify description msg
-# TODO: split preprocessing of each dataset into separated files
-
-"""
-use dataset from https://www.kaggle.com/competitions/imagenet-object-localization-challenge/data
-follow the file structure as follows
-
-{DATA_ROOT_DIR}
-├── ILSVRC
-│   ├── Annotations
-│   │   └── CLS-LOC
-│   │       ├── train
-│   │       └── val
-│   ├── Data
-│   │   └── CLS-LOC
-│   │       ├── test
-│   │       ├── train
-│   │       └── val
-│   └── ImageSets
-│       └── CLS-LOC
-│           ├── test.txt
-│           ├── train_cls.txt
-│           ├── train_loc.txt
-│           └── val.txt
-├── LOC_sample_submission.csv
-├── LOC_synset_mapping.txt
-├── LOC_train_solution.csv
-└── LOC_val_solution.csv
-"""
-def preprocess_ImageNet1k() -> pd.DataFrame:
-    data_dir = os.path.join(Config.data_dir, "ILSVRC", "Data", "CLS-LOC", "train")
-    meta_dir = os.path.join(Config.data_dir, "ILSVRC", "ImageSets", "CLS-LOC", "train_cls.txt")
-
-    # validate data integrity
-    n_class = 0
-    for dir_name in os.listdir(data_dir):
-        if re.search("n[0-9]{7,}", dir_name):
-            assert dir_name in IMAGENET2012_CLASSES.keys()
-            n_class += 1
-    assert n_class == len(IMAGENET2012_CLASSES)
-    df = pd.read_csv(meta_dir, sep=" ", header=None, names=["label_and_image_name", "count"])
-
-    # read train metadata only
-    # TODO: read val & test splits as well (currently we split the train into train & val again)
-    # DF columns : label_code | image_name | label
-    # ex) n1440764 | n01440764_11151.JPEG | tench, Tinca tinca
-    tqdm.pandas(ncols=100, desc="obtaining label_code")
-    df["label_code"] = df.progress_apply(
-        lambda rec: rec['label_and_image_name'].split('/')[0],
-        axis=1
-        # label_code example: n01440764
-    )
-    tqdm.pandas(ncols=100, desc="obtaining image_name")
-    df["image_name"] = df.progress_apply(
-        lambda rec: rec['label_and_image_name'].split('/')[1] + ".JPEG",
-        axis=1
-        # assume images are given in JPEG format
-    )
-    tqdm.pandas(ncols=100, desc="obtaining label")
-    df["label"] = df.progress_apply(
-        lambda rec: IMAGENET2012_CLASSES[rec['label_code']],
-        axis=1
-    )
-
-    # remove unnecessary columns
-    df = df.drop(["label_and_image_name", "count"], axis=1)
-
-    # add file_path column
-    tqdm.pandas(ncols=100, desc="obtaining file_path")
-    df['file_path'] = df.progress_apply(
-        lambda rec: os.path.join(data_dir, rec['label_code'], rec['image_name']),
-        axis=1
-        # file_path example: ../ImageNet1k/n01440764/n01440764_11151.JPEG
-    )
-
-    # encode label
-    encoder = LabelEncoder()
-    df["label_id"] = encoder.fit_transform(df['label'])
-
-    class_mappings = {}
-    class_inv_mappings = {}
-    labels = df['label'].unique()
-    for label in labels:
-        label_id = list(df[df['label'] == label]['label_id'])[0]
-        class_mappings[label] = label_id
-        class_inv_mappings[label_id] = label
-
-    data_dir = Config.data_dir
-    class_mapping_path = os.path.join(data_dir, "class_mapping.json")
-    class_inv_mapping_path = os.path.join(data_dir, "class_inv_mapping.json")
-
-    with open(class_mapping_path, "wt") as f:
-        json.dump(class_mappings, f)
-
-    with open(class_inv_mapping_path, "wt") as f:
-        json.dump(class_inv_mappings, f)
-
-    return df
-    
-
-# ------------------------------------------------------
-
-"""
-use dataset from https://www.kaggle.com/datasets/rhtsingh/130k-images-512x512-universal-image-embeddings
-follow the file structure as follows
-
-{DATA_ROOT_DIR}
-├── apparel
-├── artwork
-├── cars
-├── dishes
-├── furniture
-├── illustrations
-├── landmark
-├── meme
-├── packaged
-├── storefronts
-├── toys
-└── train.csv
-"""
-
-def read_data_Images130k() -> pd.DataFrame:
-    data_dir = Config.data_dir
-    df_path = os.path.join(data_dir, "train.csv")
-    df = pd.read_csv(df_path)
-    df['file_path'] = df.apply(
-        lambda rec: os.path.join(data_dir, rec['label'], rec['image_name']),
-        axis=1
-        # file_path example: ../Images130k/apparel/image0000.jpg
-    )
-    return df
-
-
-def preprocess_label_Images130k(df: pd.DataFrame) -> pd.DataFrame:
-    #label encoding
-    encoder = LabelEncoder()
-    df['label_id'] = encoder.fit_transform(df['label'])
-
-    class_mappings = {}
-    class_inv_mappings = {}
-    labels = df['label'].unique()
-    for label in labels:
-        label_id = list(df[df['label'] == label]['label_id'])[0]
-        class_mappings[label] = label_id
-        class_inv_mappings[label_id] = label
-
-    data_dir = Config.data_dir
-    class_mapping_path = os.path.join(data_dir, "class_mapping.json")
-    class_inv_mapping_path = os.path.join(data_dir, "class_inv_mapping.json")
-
-    with open(class_mapping_path, "wt") as f:
-        json.dump(class_mappings, f)
-
-    with open(class_inv_mapping_path, "wt") as f:
-        json.dump(class_inv_mappings, f)
-
-    return df
-
-
-def preprocess_Images130k() -> pd.DataFrame:
-    df = read_data_Images130k()
-    df = preprocess_label_Images130k(df)
-    return df
-
-# ------------------------------------------------------
-
-"""
-use dataset from https://www.kaggle.com/competitions/landmark-retrieval-2021/data
-follow the file structure as follows
-
-{DATA_ROOT_DIR}
-├── index
-├── sample_submission.csv
-├── test
-├── train
-│   ├── 0
-│   │   ├── 0
-│   │   │   ├── 0
-:   :   :   :
-│   │   │   └── f
-│   │   ├── 1
-│   │   │   ├── 0
-:   :   :   :
-│   │   │   └── f
-:   :   :
-│   └── f
-│       ├── 0
-│       │   ├── 0
-:       :   :
-│       │   └── f
-:       :   
-│       └── f
-│           ├── 0
-:           :
-│           └── f
-└── train.csv
-
-(test, index, sample_submission.csv are not required)
-"""
-
-def preprocess_google_landmark_2021() -> pd.DataFrame:
-    data_dir = os.path.join(Config.data_dir, "train")
-    meta_path = os.path.join(Config.data_dir, "train.csv")
-
-    # read train metadata
-    df = pd.read_csv(meta_path, sep=",", header=1, names=["image_name", "landmark_id"])
-    tqdm.pandas(ncols=100, desc="obtaining label")
-    df["label"] = df.progress_apply(
-        lambda rec: f"landmark_{rec['landmark_id']}",
-        axis=1
-        # label example: landmark_1
-    )
-    tqdm.pandas(ncols=100, desc="obtaining file_path")
-    df['file_path'] = df.progress_apply(
-        lambda rec: os.path.join(
-            data_dir,
-            rec['image_name'][0],
-            rec['image_name'][1],
-            rec['image_name'][2],
-            rec['image_name'] + ".jpg"
-        ),
-        axis=1
-        # file_path example: ../landmark-retrieval-2021/train/1/7/6/17660ef415d37059.jpg
-    )
-
-    # remove unnecessary columns
-    df = df.drop(["image_name", "landmark_id"], axis=1)
-
-    # encode label
-    encoder = LabelEncoder()
-    df["label_id"] = encoder.fit_transform(df['label'])
-
-    class_mappings = {}
-    class_inv_mappings = {}
-    labels = df['label'].unique()
-    for label in labels:
-        label_id = list(df[df['label'] == label]['label_id'])[0]
-        class_mappings[label] = label_id
-        class_inv_mappings[label_id] = label
-
-    data_dir = Config.data_dir
-    class_mapping_path = os.path.join(data_dir, "class_mapping.json")
-    class_inv_mapping_path = os.path.join(data_dir, "class_inv_mapping.json")
-
-    with open(class_mapping_path, "wt") as f:
-        json.dump(class_mappings, f)
-
-    with open(class_inv_mapping_path, "wt") as f:
-        json.dump(class_inv_mappings, f)
-
-    return df
-
-# ------------------------------------------------------
-"""
-use dataset from https://www.kaggle.com/competitions/products-10k
-follow the file structure as follows
-
-{DATA_ROOT_DIR}
-├── test
-├── train
-└── train.csv
-"""
-
-def preprocess_Product10k() -> pd.DataFrame:
-    data_dir = os.path.join(Config.data_dir, "train")
-    meta_dir = os.path.join(Config.data_dir, "train.csv")
-
-    # read train metadata
-    df = pd.read_csv(meta_dir, sep=",", header=1, names=["name", "class", "group"])
-
-    # check whether class is unique regardless of the group in whicn the record is included
-    class_list = df["class"].unique().tolist()
-    for class_label in class_list:
-        assert len(df["group"][df["class"] == class_label].unique().tolist()) == 1
-
-    tqdm.pandas(ncols=100, desc="renaming label")
-    df["label"] = df.progress_apply(
-        lambda rec: "product_" + str(rec["class"]),
-        axis=1
-    )
-    tqdm.pandas(ncols=100, desc="renaming group")
-    df["category1"] = df.progress_apply(
-        lambda rec: "product_group_" + str(rec["group"]),
-        axis=1
-    )
-
-    tqdm.pandas(ncols=100, desc="obtaining file_path")
-    df['file_path'] = df.progress_apply(
-        lambda rec: os.path.join(data_dir, rec["name"]),
-        axis=1
-    )
-
-    # remove unnecessary columns
-    df.drop(["name", "class", "group"], axis=1, inplace=True)
-
-    # encode label
-    encoder = LabelEncoder()
-    df["label_id"] = encoder.fit_transform(df['label'])
-
-    class_mappings = {}
-    class_inv_mappings = {}
-    labels = df['label'].unique()
-    for label in labels:
-        label_id = list(df[df['label'] == label]['label_id'])[0]
-        class_mappings[label] = label_id
-        class_inv_mappings[label_id] = label
-
-    data_dir = Config.data_dir
-    class_mapping_path = os.path.join(data_dir, "class_mapping.json")
-    class_inv_mapping_path = os.path.join(data_dir, "class_inv_mapping.json")
-
-    with open(class_mapping_path, "wt") as f:
-        json.dump(class_mappings, f)
-
-    with open(class_inv_mapping_path, "wt") as f:
-        json.dump(class_inv_mappings, f)
-
-    return df
-
-# ------------------------------------------------------
-
-"""
-use dataset from https://www.kaggle.com/datasets/agrigorev/clothing-dataset-full
-follow the file structure as follows
-
-{DATA_ROOT_DIR}
-├── images.csv
-├── images_compressed
-└── images_original
-"""
-
-def preprocess_ClothingDataset() -> pd.DataFrame:
-    data_dir = os.path.join(Config.data_dir, "images_original")
-    meta_dir = os.path.join(Config.data_dir, "images.csv")
-
-    # read metadata
-    df = pd.read_csv(meta_dir)
-    # remove unnecessary columns and rows
-    df.drop(["sender_id", "kids"], axis=1, inplace=True)
-    df.drop(df[df["label"] == "Not sure"].index, inplace=True)
-    df.drop(df[df["label"] == "Other"].index, inplace=True)
-    df.drop(df[df["label"] == "Skip"].index, inplace=True)
-    df.reset_index(inplace=True)
-    # remaining labels are
-    #   'T-Shirt', 'Shoes', 'Shorts', 'Shirt', 'Pants',
-    #   'Skirt', 'Top', 'Outwear', 'Dress', 'Body',
-    #   'Longsleeve', 'Undershirt', 'Hat', 'Polo', 'Blouse',
-    #   'Hoodie', 'Blazer'
-    # rename column
-    df.rename({"image": "image_name"}, axis=1, inplace=True)
-
-    # add file path column
-    tqdm.pandas(ncols=100, desc="obtaining file_path")
-    df["file_path"] = df.progress_apply(
-        lambda rec: os.path.join(data_dir, rec["image_name"] + ".jpg"),
-        axis=1
-    )
-    df.drop(["image_name"], axis=1, inplace=True)
-
-    # encode label
-    encoder = LabelEncoder()
-    df["label_id"] = encoder.fit_transform(df['label'])
-
-    class_mappings = {}
-    class_inv_mappings = {}
-    labels = df['label'].unique()
-    for label in labels:
-        label_id = list(df[df['label'] == label]['label_id'])[0]
-        class_mappings[label] = label_id
-        class_inv_mappings[label_id] = label
-
-    data_dir = Config.data_dir
-    class_mapping_path = os.path.join(data_dir, "class_mapping.json")
-    class_inv_mapping_path = os.path.join(data_dir, "class_inv_mapping.json")
-
-    with open(class_mapping_path, "wt") as f:
-        json.dump(class_mappings, f)
-
-    with open(class_inv_mapping_path, "wt") as f:
-        json.dump(class_inv_mappings, f)
-
-    return df
-
-# ------------------------------------------------------
-"""
-use dataset from https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data
-follow the file structure as follows
-
-{DATA_ROOT_DIR}
-├── articles.csv
-└── images
-"""
-
-def preprocess_HnMFashionDataset() -> pd.DataFrame:
-    data_dir = os.path.join(Config.data_dir, "images")
-    meta_dir = os.path.join(Config.data_dir, "articles.csv")
-
-    # read metadata
-    df = pd.read_csv(meta_dir, usecols=["article_id", "product_type_name"])
-    # map existing classes into unified classes
-    tqdm.pandas(ncols=100, desc="obtaining label")
-    df["label"] = df.progress_apply(
-        lambda rec: HNM_UNIFIED_CLASS_MAPPING[rec['product_type_name']],
-        axis=1
-    )
-    # remove invalid records
-    df.drop(
-        df[(df.label == "None") | (df.label == "Unclassified")].index,
-        inplace=True
-    )
-    df.reset_index(inplace=True)
-    # add file path column
-    tqdm.pandas(ncols=100, desc="obtaining file_path")
-    df["file_path"] = df.progress_apply(
-        lambda rec: os.path.join(data_dir, "0" + str(rec["article_id"])[:2], "0" + str(rec["article_id"]) + ".jpg"),
-        axis=1
-    )
-
-    # remove unnecessary columns
-    df.drop(
-        ["article_id"],
-        axis=1,
-        inplace=True
-    )
-
-    # encode label
-    encoder = LabelEncoder()
-    df["label_id"] = encoder.fit_transform(df['label'])
-
-    class_mappings = {}
-    class_inv_mappings = {}
-    labels = df['label'].unique()
-    for label in labels:
-        label_id = list(df[df['label'] == label]['label_id'])[0]
-        class_mappings[label] = label_id
-        class_inv_mappings[label_id] = label
-
-    data_dir = Config.data_dir
-    class_mapping_path = os.path.join(data_dir, "class_mapping.json")
-    class_inv_mapping_path = os.path.join(data_dir, "class_inv_mapping.json")
-
-    with open(class_mapping_path, "wt") as f:
-        json.dump(class_mappings, f)
-
-    with open(class_inv_mapping_path, "wt") as f:
-        json.dump(class_inv_mappings, f)
-
-    return df
-# ------------------------------------------------------
+from preprocessing.data_config import DataConfigType
+from preprocessing.imagenet1k import preprocess_ImageNet1k
+from preprocessing.images130k import preprocess_Images130k
+from preprocessing.google_landmark_2021 import preprocess_google_landmark_2021
+from preprocessing.product10k import preprocess_Product10k
+from preprocessing.clothing import preprocess_ClothingDataset
+from preprocessing.hnm import preprocess_HnMFashionDataset
+
+
+def get_dataframe_from_single_dataset(opt: DataConfigType) ->pd.DataFrame:
+    print(f"Processing {opt.data_name} started")
+    if opt.data_name.lower() == "images130k":
+        return preprocess_Images130k(opt)
+    elif opt.data_name.lower() == "imagenet1k":
+        return preprocess_ImageNet1k(opt)
+    elif opt.data_name.lower() == "google-landmark-2021":
+        return preprocess_google_landmark_2021(opt)
+    elif opt.data_name.lower() == "product10k":
+        return preprocess_Product10k(opt)
+    elif opt.data_name.lower() == "clothing-dataset":
+        return preprocess_ClothingDataset(opt)
+    elif opt.data_name.lower() == "hnm-fashion-dataset":
+        return preprocess_HnMFashionDataset(opt)
+    else:
+        raise ValueError(f"dataset {opt.data_name} is not supported")
 
 
 def preprocess_main() -> pd.DataFrame:
-    print(f"Processing {Config.data_name} started")
-    if Config.data_name.lower() == "images130k":
-        return preprocess_Images130k()
-    elif Config.data_name.lower() == "imagenet1k":
-        return preprocess_ImageNet1k()
-    elif Config.data_name.lower() == "google-landmark-2021":
-        return preprocess_google_landmark_2021()
-    elif Config.data_name.lower() == "product10k":
-        return preprocess_Product10k()
-    elif Config.data_name.lower() == "clothing-dataset":
-        return preprocess_ClothingDataset()
-    elif Config.data_name.lower() == "hnm-fashion-dataset":
-        return preprocess_HnMFashionDataset()
-    else:
-        raise ValueError(f"dataset {Config.data_name} is not supported")
+    # TODO: express data configuration of 'Config' in terms of DataConfigType
+    opt = DataConfigType()
+    opt.data_name = Config.data_name
+    opt.data_dir = Config.data_dir
+    
+    df = get_dataframe_from_single_dataset(opt)
 
+    # encode label
+    encoder = LabelEncoder()
+    df["label_id"] = encoder.fit_transform(df['label'])
+
+    # save class mapping to the ckpt directory
+    label_mappings = {}
+    label_inv_mappings = {}
+    labels = df['label'].unique()
+    for label in labels:
+        label_id = list(df[df['label'] == label]['label_id'])[0]
+        label_mappings[label] = label_id
+        label_inv_mappings[label_id] = label
+
+    save_path = Config.save_path
+    label_mapping_path = os.path.join(save_path, "label_mapping.json")
+    label_inv_mapping_path = os.path.join(save_path, "label_inv_mapping.json")
+
+    print("exporting label - label_id mapping...")
+    with open(label_mapping_path, "wt") as f:
+        json.dump(label_mappings, f)
+
+    with open(label_inv_mapping_path, "wt") as f:
+        json.dump(label_inv_mappings, f)
+    print("export completed!")
+
+    return df
 
 if __name__ == "__main__":
     df = preprocess_main()
