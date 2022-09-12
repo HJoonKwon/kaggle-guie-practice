@@ -1,5 +1,6 @@
 from typing import List, Optional
 from preprocessing.data_config import DataConfigType
+import os
 
 sizes = {
     # EfficientNet
@@ -41,6 +42,7 @@ sizes = {
     'swin_large_patch4_window12_384_in22k': (384, 384),
 }
 
+DATA_COMMON = "/data5/dukim/kaggle/"
 
 class ConfigType:
 
@@ -75,16 +77,26 @@ class ConfigType:
     data_config: List[DataConfigType] = [
         DataConfigType(**{
             "data_name": "Images130k",
-            "data_dir": "/media/dounkim/KDU/Individual_Study/kaggle/google-universal-image-embedding/Images130k"
+            "data_dir": os.path.join(DATA_COMMON, "Images130k")
+        }),
+        DataConfigType(**{
+            "data_name": "Clothing-Dataset",
+            "data_dir": os.path.join(DATA_COMMON, "clothing-dataset-full"),
+            "label_column": "supercategory"
         }),
         DataConfigType(**{
             "data_name": "HnM-Fashion-Dataset",
-            "data_dir": "/media/dounkim/KDU/Individual_Study/kaggle/google-universal-image-embedding/h-and-m-personalized-fashion-recommendations",
+            "data_dir": os.path.join(DATA_COMMON, "h-and-m-personalized-fashion-recommendations"),
+            "label_column": "supercategory"
+        }),
+        DataConfigType(**{
+            "data_name": "Product10k",
+            "data_dir": os.path.join(DATA_COMMON, "Product10k"),
             "label_column": "supercategory"
         }),
         DataConfigType(**{
             "data_name": "Google-Landmark-2021",
-            "data_dir": "/media/dounkim/KDU/Individual_Study/kaggle/google-universal-image-embedding/landmark-retrieval-2021",
+            "data_dir": os.path.join(DATA_COMMON, "landmark-retrieval-2021"),
             "label_column": "supercategory"
         })
     ]
