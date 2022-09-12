@@ -111,6 +111,7 @@ class ConfigType:
     s_clip: float = 30.0
     m_clip: float = 0.20
     ls_eps_clip: float = 0.0
+    clip_output_size: int = 768 
 
     # directories
     data_dir: str = '/media/volume4/130k-512x512-guie'

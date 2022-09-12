@@ -176,12 +176,20 @@ class GUIEModel(nn.Module):
 class CLIPModel(nn.Module):
     def __init__(self, opts):
         super(CLIPModel, self).__init__()
+        self.clip_norm = nn.Sequential(
+            transforms.Resize(size=[336, 336]),
+            # transforms.CenterCrop(336),
+            # transforms.ToTensor(),
+            transforms.Normalize(mean=(0.48145466, 0.4578275, 0.40821073), std=(0.26862954, 0.26130258, 0.27577711))
+        )
         self.backbone = load_clip_backbone(opts)
+        # freeze backbone model parameters
         for param in self.backbone.parameters():
             param.requires_grad = False
-        in_features = self.backbone.num_features
-        self.dense = nn.Linear(in_features=in_features,
-                                out_features=opts.raw_embedding_size),
+        # in_features = self.backbone.num_features
+        self.dense = nn.Linear(in_features=opts.clip_output_size,
+                                out_features=opts.raw_embedding_size,
+                                dtype = torch.float16)
         self.dropout = nn.Dropout(p=0.2)
         self.fc = ArcMarginProduct(num_in_feats=opts.raw_embedding_size,
                                    num_out_feats=opts.num_classes,
@@ -189,21 +197,22 @@ class CLIPModel(nn.Module):
                                    m=opts.m_clip,
                                    easy_margin=opts.easy_margin,
                                    ls_eps=opts.ls_eps_clip)
-        self.softmax = nn.softmax()
         self.avg = nn.AdaptiveAvgPool1d(opts.output_size)
 
     def forward(self, images, labels):
-        features = self.backbone(images)
-        pooled_features = self.dropout(features)
-        embedding_dense = self.dense(pooled_features)
-        embedding = self.fc(embedding_dense)
-        output = self.softmax(embedding, labels)
+        x1                      = self.clip_norm(images / 255.0)
+        features                = self.backbone(x1.half())
+        pooled_features         = self.dropout(features)
+        embedding_dense         = self.dense(pooled_features)
+        embedding               = self.fc(embedding_dense.float(), labels)
+        output                  = F.softmax(embedding, dim=1)
         return output
 
     def extract(self, images):
-        features = self.backbone(images)
-        pooled_features = self.dropout(features)
-        embedding_dense = self.dense(pooled_features)
-        embedding = self.avg(embedding_dense)
-        embedding = F.normalize(embedding, p=2.0)
+        x1                      = self.clip_norm(images / 255.0)
+        features                = self.backbone(x1.half())
+        pooled_features         = self.dropout(features)
+        embedding_dense         = self.dense(pooled_features)
+        embedding_normalized    = F.normalize(embedding_dense, p=2.0)
+        embedding               = self.avg(embedding_normalized)
         return embedding
