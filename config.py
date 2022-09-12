@@ -1,5 +1,5 @@
 from typing import List, Optional
-from preprocessing.data_config import NUM_CLASSES
+from preprocessing.data_config import DataConfigType
 
 sizes = {
     # EfficientNet
@@ -70,17 +70,27 @@ class ConfigType:
     start_epoch: int = 0
     epoch: int = 5
 
-    # dataset selection
-    # 1. Images130k
-    # 2. Imagenet1k
-    # 3. Google-Landmark-2021
-    # 4. Product10k
-    # 5. Clothing-Dataset
-    # 6. HnM-Fashion-Dataset
-    data_name: str = 'Images130k'
+    # dataset configuration
+    # List of availabel data_name is in preprocessing.data_config
+    data_config: List[DataConfigType] = [
+        DataConfigType(**{
+            "data_name": "Images130k",
+            "data_dir": "/media/dounkim/KDU/Individual_Study/kaggle/google-universal-image-embedding/Images130k"
+        }),
+        DataConfigType(**{
+            "data_name": "HnM-Fashion-Dataset",
+            "data_dir": "/media/dounkim/KDU/Individual_Study/kaggle/google-universal-image-embedding/h-and-m-personalized-fashion-recommendations",
+            "label_column": "supercategory"
+        }),
+        DataConfigType(**{
+            "data_name": "Google-Landmark-2021",
+            "data_dir": "/media/dounkim/KDU/Individual_Study/kaggle/google-universal-image-embedding/landmark-retrieval-2021",
+            "label_column": "supercategory"
+        })
+    ]
 
     # model setting
-    num_classes: int = NUM_CLASSES[data_name]
+    # num_classes: int = NUM_CLASSES[data_name] TODO: compute num_classes automatically
     embedding_size: int = 256
     model_name: str = "swin_large_patch4_window12_384_in22k"  #"convnext"
     img_size: tuple = sizes[model_name]
@@ -91,7 +101,6 @@ class ConfigType:
     easy_margin = False
 
     # directories
-    data_dir: str = '/media/volume4/130k-512x512-guie'
     save_path: str = '/media/volume4/130k-512x512-guie/ckpts'
     save_file_name: str = f'{model_name}_images130k'
 
