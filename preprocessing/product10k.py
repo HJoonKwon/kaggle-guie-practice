@@ -52,6 +52,9 @@ def preprocess_Product10k(opt: DataConfigType) -> pd.DataFrame:
         axis=1
     )
 
+    # add supercategory column
+    df['supercategory'] = 'packaged'
+
     # remove unnecessary columns
     df.drop(
         ["name", "class", "group"],
