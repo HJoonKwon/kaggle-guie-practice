@@ -113,7 +113,7 @@ class ArcMarginProductSubcenter(nn.Module):
 
 
 class GUIEModel(nn.Module):
-    def __init__(self, opts):
+    def __init__(self, opts, n_cls):
         super(GUIEModel, self).__init__()
         self.backbone = timm.create_model(opts.model_name,
                                           pretrained=True,
@@ -130,7 +130,7 @@ class GUIEModel(nn.Module):
             nn.SyncBatchNorm(num_features=opts.embedding_size),
         )
         self.fc = ArcMarginProduct(num_in_feats=opts.embedding_size,
-                                   num_out_feats=opts.num_classes,
+                                   num_out_feats=n_cls,
                                    s=opts.s,
                                    m=opts.m,
                                    easy_margin=opts.easy_margin,

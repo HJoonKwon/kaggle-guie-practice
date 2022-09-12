@@ -90,7 +90,6 @@ class ConfigType:
     ]
 
     # model setting
-    # num_classes: int = NUM_CLASSES[data_name] TODO: compute num_classes automatically
     embedding_size: int = 256
     model_name: str = "swin_large_patch4_window12_384_in22k"  #"convnext"
     img_size: tuple = sizes[model_name]

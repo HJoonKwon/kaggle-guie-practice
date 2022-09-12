@@ -43,6 +43,7 @@ def preprocess_main() -> pd.DataFrame:
         # and merge
         df_merged = pd.concat([df_merged, df])
     df_merged.reset_index(drop=True, inplace=True)
+    print(f"Total {len(df_merged['label'].unique())} classes as a result of preprocessing")
 
     # encode label
     encoder = LabelEncoder()

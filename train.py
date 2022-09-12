@@ -156,7 +156,9 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
     valid_loader, _ = loaders_dict["valid"]
 
     # model
-    model = GUIEModel(opts)
+    n_cls = len(df["label_id"].unique())
+    print(f"Creating GUIEModel for {n_cls} classes") # sanity check
+    model = GUIEModel(opts, n_cls)
     model = model.cuda(local_gpu_id)
     if opts.load_from is not None:
         ckpt_data = torch.load(opts.load_from, map_location=next(model.parameters()).device)
