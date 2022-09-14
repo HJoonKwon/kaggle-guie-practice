@@ -88,8 +88,8 @@ def create_folds(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def generate_df() -> pd.DataFrame:
-    df = preprocess_main()
+def generate_df(opt: ConfigType) -> pd.DataFrame:
+    df = preprocess_main(opt)
     df = create_folds(df)
     return df
 

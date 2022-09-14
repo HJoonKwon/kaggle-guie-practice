@@ -2,7 +2,7 @@ import os
 import json
 from sklearn.preprocessing import LabelEncoder
 import pandas as pd
-from config import Config
+from config import ConfigType
 
 from preprocessing.data_config import DataConfigType
 from preprocessing.imagenet1k import preprocess_ImageNet1k
@@ -32,9 +32,9 @@ def get_dataframe_from_single_dataset(opt: DataConfigType) ->pd.DataFrame:
         raise ValueError(f"dataset {data_name} is not supported")
 
 
-def preprocess_main() -> pd.DataFrame:
+def preprocess_main(config: ConfigType) -> pd.DataFrame:
     df_merged = pd.DataFrame(columns=["label", "file_path"])
-    for opt in Config["data_config"]:
+    for opt in config["data_config"]:
         df = get_dataframe_from_single_dataset(opt)
         # select label_column (which is specified by opt) and "file_path"
         df = df[[opt["label_column"], "file_path"]]
@@ -58,7 +58,7 @@ def preprocess_main() -> pd.DataFrame:
         label_mappings[label] = label_id
         label_inv_mappings[label_id] = label
 
-    save_path = Config.save_path
+    save_path = config.save_path
     label_mapping_path = os.path.join(save_path, "label_mapping.json")
     label_inv_mapping_path = os.path.join(save_path, "label_inv_mapping.json")
 
@@ -73,5 +73,6 @@ def preprocess_main() -> pd.DataFrame:
     return df_merged
 
 if __name__ == "__main__":
-    df = preprocess_main()
+    from config import Config
+    df = preprocess_main(Config)
     print(df)
