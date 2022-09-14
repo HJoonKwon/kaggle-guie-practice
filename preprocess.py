@@ -33,23 +33,28 @@ def get_dataframe_from_single_dataset(opt: DataConfigType) ->pd.DataFrame:
 
 
 def preprocess_main() -> pd.DataFrame:
-    # TODO: express data configuration of 'Config' in terms of DataConfigType
-    opt = DataConfigType()
-    opt.data_name = Config.data_name
-    opt.data_dir = Config.data_dir
-    
-    df = get_dataframe_from_single_dataset(opt)
+    df_merged = pd.DataFrame(columns=["label", "file_path"])
+    for opt in Config["data_config"]:
+        df = get_dataframe_from_single_dataset(opt)
+        # select label_column (which is specified by opt) and "file_path"
+        df = df[[opt["label_column"], "file_path"]]
+        # change label_column to "label"
+        df.rename({opt["label_column"]: "label"}, axis=1, inplace=True)
+        # and merge
+        df_merged = pd.concat([df_merged, df])
+    df_merged.reset_index(drop=True, inplace=True)
+    print(f"Total {len(df_merged['label'].unique())} classes as a result of preprocessing")
 
     # encode label
     encoder = LabelEncoder()
-    df["label_id"] = encoder.fit_transform(df['label'])
+    df_merged["label_id"] = encoder.fit_transform(df_merged['label'])
 
     # save class mapping to the ckpt directory
     label_mappings = {}
     label_inv_mappings = {}
-    labels = df['label'].unique()
+    labels = df_merged['label'].unique()
     for label in labels:
-        label_id = list(df[df['label'] == label]['label_id'])[0]
+        label_id = list(df_merged[df_merged['label'] == label]['label_id'])[0]
         label_mappings[label] = label_id
         label_inv_mappings[label_id] = label
 
@@ -65,7 +70,7 @@ def preprocess_main() -> pd.DataFrame:
         json.dump(label_inv_mappings, f)
     print("export completed!")
 
-    return df
+    return df_merged
 
 if __name__ == "__main__":
     df = preprocess_main()
