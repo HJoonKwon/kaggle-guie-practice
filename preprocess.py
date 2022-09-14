@@ -14,6 +14,7 @@ from preprocessing.hnm import preprocess_HnMFashionDataset
 from preprocessing.ifood import preprocess_ifood
 from preprocessing.met import preprocess_MET
 from preprocessing.furniture_images import preprocess_furniture_images
+from preprocessing.bonn_furniture import preprocess_BonnFurniture
 
 
 def get_dataframe_from_single_dataset(opt: DataConfigType) ->pd.DataFrame:
@@ -37,6 +38,8 @@ def get_dataframe_from_single_dataset(opt: DataConfigType) ->pd.DataFrame:
         return preprocess_MET(opt)
     elif data_name.lower() == "furniture-images":
         return preprocess_furniture_images(opt)
+    elif data_name.lower() == "bonn-furniture-styles-dataset":
+        return preprocess_BonnFurniture(opt)
     else:
         raise ValueError(f"dataset {data_name} is not supported")
 
