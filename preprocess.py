@@ -33,6 +33,13 @@ def get_dataframe_from_single_dataset(opt: DataConfigType) ->pd.DataFrame:
 
 
 def preprocess_main(config: ConfigType) -> pd.DataFrame:
+    # check whether the directories are valid
+    for opt in config["data_config"]:
+        if not os.path.exists(opt["data_dir"]):
+            raise RuntimeError("data_dir not exist: " + opt["data_dir"])
+    if not os.path.exists(config["save_path"]):
+        raise RuntimeError(f"save_path not exist: " + config["save_path"])
+
     df_merged = pd.DataFrame(columns=["label", "file_path"])
     for opt in config["data_config"]:
         df = get_dataframe_from_single_dataset(opt)
