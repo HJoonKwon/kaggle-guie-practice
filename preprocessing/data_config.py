@@ -6,6 +6,10 @@ class DataConfigType:
     # 4. Product10k
     # 5. Clothing-Dataset
     # 6. HnM-Fashion-Dataset
+    # 7. iFood
+    # 8. MET
+    # 9. Furniture-Images
+    # 10. Bonn-Furniture-Styles-Dataset
     data_name: str
     data_dir: str # root path to the data directory
     label_column: str # which column to use as labels (default is 'label')
