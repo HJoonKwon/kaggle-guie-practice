@@ -11,6 +11,7 @@ from preprocessing.google_landmark_2021 import preprocess_google_landmark_2021
 from preprocessing.product10k import preprocess_Product10k
 from preprocessing.clothing import preprocess_ClothingDataset
 from preprocessing.hnm import preprocess_HnMFashionDataset
+from preprocessing.ifood import preprocess_ifood
 
 
 def get_dataframe_from_single_dataset(opt: DataConfigType) ->pd.DataFrame:
@@ -28,6 +29,8 @@ def get_dataframe_from_single_dataset(opt: DataConfigType) ->pd.DataFrame:
         return preprocess_ClothingDataset(opt)
     elif data_name.lower() == "hnm-fashion-dataset":
         return preprocess_HnMFashionDataset(opt)
+    elif data_name.lower() == "ifood":
+        return preprocess_ifood(opt)
     else:
         raise ValueError(f"dataset {data_name} is not supported")
 
