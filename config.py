@@ -42,7 +42,7 @@ sizes = {
     'swin_large_patch4_window12_384_in22k': (384, 384),
 }
 
-DATA_COMMON = "/data5/dukim/kaggle/"
+DATA_COMMON = "/data1/dukim/kaggle/"
 
 class ConfigType:
 
@@ -76,6 +76,21 @@ class ConfigType:
     # List of availabel data_name is in preprocessing.data_config
     data_config: List[DataConfigType] = [
         DataConfigType(**{
+            "data_name": "Bonn-Furniture-Styles-Dataset",
+            "data_dir": os.path.join(DATA_COMMON, "Bonn_Furniture_Styles_Dataset"),
+            "label_column": "supercategory"
+        }),
+        DataConfigType(**{
+            "data_name": "Furniture-Images",
+            "data_dir": os.path.join(DATA_COMMON, "furniture-images-dataset"),
+            "label_column": "supercategory"
+        }),
+        DataConfigType(**{
+            "data_name": "MET",
+            "data_dir": os.path.join(DATA_COMMON, "the-met-dataset"),
+            "label_column": "supercategory"
+        }),
+        DataConfigType(**{
             "data_name": "Images130k",
             "data_dir": os.path.join(DATA_COMMON, "Images130k")
         }),
@@ -97,6 +112,11 @@ class ConfigType:
         DataConfigType(**{
             "data_name": "Google-Landmark-2021",
             "data_dir": os.path.join(DATA_COMMON, "landmark-retrieval-2021"),
+            "label_column": "supercategory"
+        }),
+        DataConfigType(**{
+            "data_name": "iFood",
+            "data_dir": os.path.join(DATA_COMMON, "ifood"),
             "label_column": "supercategory"
         })
     ]
