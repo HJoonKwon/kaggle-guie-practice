@@ -17,10 +17,12 @@ follow the file structure as follows
 return:
     DataFrame of columns: label | file_path | desc | supercategory
     ex) Bed / bedroom item | .../furnitue_images/1634011559093_Bed Room Set for sale.jpg | bed room set | furniture
+    TODO: resolve file open error due to non-ascii character
 
 list of labels (total 9 categories)
     'Other', 'Bed / bedroom item', 'TV / stereo', 'Storage', 'Table / chair',
     'Sofa / living room item', 'Antique / art', 'Lighting', 'Textiles / decoration'
+    TODO: make label consistent with the bonn_furniture
 """
 
 def preprocess_furniture_images(opt: DataConfigType) -> pd.DataFrame:
