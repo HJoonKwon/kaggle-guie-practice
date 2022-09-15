@@ -82,9 +82,6 @@ def create_folds(df: pd.DataFrame) -> pd.DataFrame:
     df['kfold'] = -1
     for fold_id, (train_idx, valid_idx) in enumerate(skf.split(**skf_kwargs)):
         df.loc[valid_idx, "kfold"] = fold_id
-
-    # classes = sorted(df['label_id'].unique())
-    # label_mapping = dict(zip(classes, list(range(len(classes)))))
     return df
 
 
@@ -366,7 +363,7 @@ if __name__ == "__main__":
     run = setup_run(config)
 
     # generate dataframe with preprocessing
-    df = generate_df()
+    df = generate_df(config)
 
     # multiprocessing for multi-gpu training
     mp.spawn(main_worker,
