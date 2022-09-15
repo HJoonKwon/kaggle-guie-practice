@@ -1,5 +1,6 @@
 import os
 import json
+from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 import pandas as pd
 from config import ConfigType
@@ -59,6 +60,13 @@ def preprocess_main(config: ConfigType) -> pd.DataFrame:
         df = df[[opt["label_column"], "file_path"]]
         # change label_column to "label"
         df.rename({opt["label_column"]: "label"}, axis=1, inplace=True)
+        # do downsampling
+        if opt["downsample_rate"] > 1:
+            skf_kwargs = {'X': df, 'y': df["label"]}
+            skf = StratifiedKFold(n_splits=opt["downsample_rate"], shuffle=False)
+            _, sampled_idx = next(iter(skf.split(**skf_kwargs)))
+            df = df.iloc[sampled_idx]
+            df.reset_index(drop=True, inplace=True)
         # and merge
         df_merged = pd.concat([df_merged, df])
     df_merged.reset_index(drop=True, inplace=True)
