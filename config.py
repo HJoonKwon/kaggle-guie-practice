@@ -88,7 +88,8 @@ class ConfigType:
         DataConfigType(**{
             "data_name": "MET",
             "data_dir": os.path.join(DATA_COMMON, "the-met-dataset"),
-            "label_column": "supercategory"
+            "label_column": "supercategory",
+            "downsample_rate": 2
         }),
         DataConfigType(**{
             "data_name": "Images130k",
@@ -112,7 +113,8 @@ class ConfigType:
         DataConfigType(**{
             "data_name": "Google-Landmark-2021",
             "data_dir": os.path.join(DATA_COMMON, "landmark-retrieval-2021"),
-            "label_column": "supercategory"
+            "label_column": "supercategory",
+            "downsample_rate": 8
         }),
         DataConfigType(**{
             "data_name": "iFood",
