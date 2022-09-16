@@ -199,6 +199,8 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
 
             # retreive lr
             lr = optimizer.param_groups[0]['lr']
+            if scheduler:
+                scheduler.step()
 
             # time
             toc = time.time()
@@ -206,7 +208,7 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
             # visualization
             bar.set_description(
                 f"Epoch [{epoch}/{opts.epoch}], Loss: {loss.item():.4f}, "
-                f"LR: {lr:.5f}, Time: {toc-tic:.2f}")
+                f"LR: {lr}, Time: {toc-tic:.2f}")
             if (step % opts.vis_step == 0
                     or step == len(train_loader) - 1) and opts.rank == 0:
                 if do_log:
@@ -295,8 +297,6 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
 
             print(f"top-1 percentage: {accuracy_top1*100:.3f}%")
             print(f"top-5 percentage: {accuracy_top5*100:.3f}%")
-            if scheduler:
-                scheduler.step()
     return 0
 
 
