@@ -113,9 +113,18 @@ def get_scheduler(
 
 
 def get_dataloaders(df: pd.DataFrame, alb_transforms: dict, opts: ConfigType):
+    # split into train/val
     fold = opts.fold
     df_train = df[df.kfold != fold].reset_index(drop=True)
     df_valid = df[df.kfold == fold].reset_index(drop=True)
+    # if there is a remainder in train dataset,
+    # drop the record whose label is the most frequently appeared
+    # to prevent ValueError of BatchNorm, which requires more than two samples per batch
+    if len(df_train) % opts.train_sample_per_gpu:
+        rm_idx = df_train[df_train.label == df_train.label.value_counts().idxmax()].index[-1]
+        df_train.drop(rm_idx, axis=0, inplace=True)
+        df_train = df_train.reset_index(drop=True)
+    # build dataset, sampler and loader
     train_dataset = GUIEDataset(df_train, transforms=alb_transforms["train"])
     valid_dataset = GUIEDataset(df_valid, transforms=alb_transforms["valid"])
 
