@@ -140,9 +140,14 @@ class GUIEModel(nn.Module):
         valid_state_dict = deepcopy(model_state_dict)
         # if the dimension of head (number of classes) does not match,
         # do not load head
-        if model_state_dict["module.fc.weight"].shape != self.fc.weight.shape:
-            valid_state_dict["module.fc.weight"] = self.fc.weight
-            warnings.warn(f"fc parameters are not loaded.", UserWarning) 
+        if 'module.fc.weight' in model_state_dict:
+            if model_state_dict["module.fc.weight"].shape != self.fc.weight.shape:
+                valid_state_dict["module.fc.weight"] = self.fc.weight
+                warnings.warn(f"fc parameters are not loaded.", UserWarning) 
+        elif 'fc.weight' in model_state_dict:
+            if model_state_dict["fc.weight"].shape != self.fc.weight.shape:
+                valid_state_dict["fc.weight"] = self.fc.weight
+                warnings.warn(f"fc parameters are not loaded.", UserWarning)
         # remove "module." in front of the keys
         valid_state_dict = OrderedDict(
             (k[7:], v) if k.startswith("module") else (k, v) \
