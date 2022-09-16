@@ -7,7 +7,6 @@ import torch.nn.functional as F
 from torch.nn import Parameter
 import math
 import timm
-from config import Config
 
 
 class GEM(nn.Module):

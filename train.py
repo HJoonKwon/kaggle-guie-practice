@@ -358,12 +358,16 @@ if __name__ == "__main__":
 
     # read user config
     config = ConfigType()
+    # TODO: export and import config
+    # TODO: create new checkpoint directory based on current time and date 
+    #       whenever the train starts
 
     # set wandb run
     run = setup_run(config)
 
     # generate dataframe with preprocessing
     df = generate_df(config)
+    # TODO: show data statistics
 
     # multiprocessing for multi-gpu training
     mp.spawn(main_worker,
