@@ -124,9 +124,9 @@ class GUIEModel(nn.Module):
         # self.pooling = GEM()
         in_features = self.backbone.num_features
         self.embedding_neck = nn.Sequential(
+            nn.Dropout(p=0.2),
             nn.Linear(in_features=in_features,
                                    out_features=opts.embedding_size),
-            nn.SyncBatchNorm(num_features=opts.embedding_size),
         )
         self.fc = ArcMarginProduct(num_in_feats=opts.embedding_size,
                                    num_out_feats=n_cls,
@@ -134,6 +134,7 @@ class GUIEModel(nn.Module):
                                    m=opts.m,
                                    easy_margin=opts.easy_margin,
                                    ls_eps=opts.ls_eps)
+        self.avg = nn.AdaptiveAvgPool1d(opts.output_size)
 
     # call this function before wrapping with DDP
     def load_model(self, model_state_dict):
@@ -143,7 +144,7 @@ class GUIEModel(nn.Module):
         if 'module.fc.weight' in model_state_dict:
             if model_state_dict["module.fc.weight"].shape != self.fc.weight.shape:
                 valid_state_dict["module.fc.weight"] = self.fc.weight
-                warnings.warn(f"fc parameters are not loaded.", UserWarning) 
+                warnings.warn(f"fc parameters are not loaded.", UserWarning)
         elif 'fc.weight' in model_state_dict:
             if model_state_dict["fc.weight"].shape != self.fc.weight.shape:
                 valid_state_dict["fc.weight"] = self.fc.weight
@@ -161,7 +162,6 @@ class GUIEModel(nn.Module):
         # pooled_features = self.pooling(features)
         pooled_features = features
         embedding = self.embedding_neck(pooled_features)
-        embedding = F.normalize(embedding, p=2.0)
         output = self.fc(embedding, labels)
         return output
 
@@ -170,5 +170,6 @@ class GUIEModel(nn.Module):
         # pooled_features = self.pooling(features).flatten(1)
         pooled_features = features
         embedding = self.embedding_neck(pooled_features)
+        embedding = self.avg(embedding)
         embedding = F.normalize(embedding, p=2.0)
         return embedding
