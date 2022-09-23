@@ -7,7 +7,7 @@ from xmlrpc.client import Boolean
 import torch.distributed as dist
 import torch
 import os
-from config import ConfigType, clip_models_path
+from config import ConfigType, clip_models_url
 import hashlib
 import urllib
 import warnings
@@ -124,7 +124,7 @@ def model_download(url: str, root: str):
 
 
 def load_clip_backbone(opts: ConfigType):
-    model_path = model_download(clip_models_path[opts.clip_version], os.path.expanduser("~/.cache/clip"))
+    model_path = model_download(clip_models_url[opts.model_name], os.path.expanduser("~/.cache/clip"))
     with open(model_path, 'rb') as opened_file:
         clip_vit = torch.jit.load(opened_file, map_location="cuda:0").visual.eval()
     return clip_vit

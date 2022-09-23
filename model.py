@@ -9,6 +9,7 @@ from torchvision import transforms
 import math
 import timm
 from utils import load_clip_backbone
+from config import clip_models_output_dims
 
 
 class GEM(nn.Module):
@@ -22,7 +23,6 @@ class GEM(nn.Module):
         return self.gem(x, p=self.p, eps=self.eps)
 
     def gem(self, x, p=Parameter(torch.ones(1) * 3), eps=1e-6):
-        # return F.avg_pool2d(x.clamp(min=eps).pow(p), (x.size(-2), x.size(-1))).pow(1./p)
         return x.clamp(min=eps).pow(p).mean((-2, -1)).pow(1.0 / p)
 
     def __repr__(self):
@@ -75,8 +75,6 @@ class ArcMarginProduct(nn.Module):
             phi = torch.where(cosine > self.th, phi, cosine - self.mm)
 
         # --------------------------- convert label to one-hot ---------------------
-        # one_hot = torch.zeros(cosine.size(), requires_grad=True, device='cuda')
-        # one_hot = torch.zeros(cosine.size()).cuda()
         # one_hot = torch.zeros(cosine.size()).to(Config["device"])
         # one_hot = one_hot.scatter_(1, label.view(-1, 1).long(), 1)
         one_hot = F.one_hot(label, num_classes=self.num_out_feats)
@@ -121,9 +119,7 @@ class GUIEModel(nn.Module):
                                           num_classes=0)
         for param in self.backbone.parameters():
             param.requires_grad = False
-        # self.backbone.requires_grad_(False)
         #TODO:: maybe using features_only=True option seems better
-        # self.pooling = GEM()
         in_features = self.backbone.num_features
         self.embedding_neck = nn.Sequential(
             nn.Linear(in_features=in_features,
@@ -159,8 +155,6 @@ class GUIEModel(nn.Module):
 
     def forward(self, images, labels):
         features = self.backbone(images)
-        # pooled_features = self.pooling(features).flatten(1) # flatten dim>=1 part
-        # pooled_features = self.pooling(features)
         pooled_features = features
         embedding = self.embedding_neck(pooled_features)
         embedding = F.normalize(embedding, p=2.0)
@@ -169,7 +163,6 @@ class GUIEModel(nn.Module):
 
     def extract(self, images):
         features = self.backbone(images)
-        # pooled_features = self.pooling(features).flatten(1)
         pooled_features = features
         embedding = self.embedding_neck(pooled_features)
         embedding = F.normalize(embedding, p=2.0)
@@ -180,9 +173,7 @@ class CLIPModel(nn.Module):
     def __init__(self, opts, n_cls):
         super(CLIPModel, self).__init__()
         self.clip_norm = nn.Sequential(
-            transforms.Resize(size=[336, 336]),
-            # transforms.CenterCrop(336),
-            # transforms.ToTensor(),
+            transforms.Resize(size=opts.img_size),
             transforms.Normalize(mean=(0.48145466, 0.4578275, 0.40821073), std=(0.26862954, 0.26130258, 0.27577711))
         )
         self.backbone = load_clip_backbone(opts)
@@ -190,7 +181,7 @@ class CLIPModel(nn.Module):
         for param in self.backbone.parameters():
             param.requires_grad = False
         # in_features = self.backbone.num_features
-        self.dense = nn.Linear(in_features=opts.clip_output_size,
+        self.dense = nn.Linear(in_features=clip_models_output_dims[opts.model_name],
                                 out_features=opts.raw_embedding_size,
                                 dtype = torch.float16)
         self.dropout = nn.Dropout(p=0.2)
@@ -200,7 +191,7 @@ class CLIPModel(nn.Module):
                                    m=opts.m,
                                    easy_margin=opts.easy_margin,
                                    ls_eps=opts.ls_eps)
-        self.avg = nn.AdaptiveAvgPool1d(opts.output_size)
+        self.avg = nn.AdaptiveAvgPool1d(opts.final_output_size)
 
     def forward(self, images, labels):
         x1                      = self.clip_norm(images / 255.0)

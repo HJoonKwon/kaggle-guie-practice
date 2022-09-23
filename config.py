@@ -1,8 +1,26 @@
 from typing import List, Optional
 from preprocessing.data_config import DataConfigType
 import os
+import re
 
-sizes = {
+
+def get_model_type(model_name: str):
+    if len(re.findall('^b[0-9]$', model_name)) != 0:
+        return 'EfficientNet'
+    elif len(re.findall('^dino', model_name)) != 0:
+        return 'DINO'
+    elif len(re.findall('^convnext', model_name)) != 0:
+        return 'ConvNext'
+    elif len(re.findall('^swin', model_name)) != 0:
+        return 'SwinTransformer'
+    elif len(re.findall('^RN[0-9]{2,}', model_name)) != 0 \
+        or len(re.findall('^ViT-[LB]', model_name)) != 0:
+        return 'CLIP'
+    else:
+        raise ValueError(f"{model_name} is not supported model type")
+
+
+input_img_sizes = {
     # EfficientNet
     'b0': (256, 224),
     'b1': (256, 240),
@@ -40,11 +58,18 @@ sizes = {
     'swin_base_patch4_window12_384_in22k': (384, 384),
     'swin_large_patch4_window7_224_in22k': (224, 224),
     'swin_large_patch4_window12_384_in22k': (384, 384),
+
+    # Vision Transformer used in CLIP
+    # TODO: add others
+    'ViT-B/32': (225, 225),
+    'ViT-B/16': (225, 225),
+    'ViT-L/14': (225, 225),
+    'ViT-L/14@336px': (336, 336),
 }
 
 DATA_COMMON = "/data1/dukim/kaggle/"
 
-clip_models_path = {
+clip_models_url = {
     "RN50": "https://openaipublic.azureedge.net/clip/models/afeb0e10f9e5a86da6080e35cf09123aca3b358a0c3e3b6c78a7b63bc04b6762/RN50.pt",
     "RN101": "https://openaipublic.azureedge.net/clip/models/8fa8567bab74a42d41c5915025a8e4538c3bdbe8804a470a72f30b0d94fab599/RN101.pt",
     "RN50x4": "https://openaipublic.azureedge.net/clip/models/7e526bd135e493cef0776de27d5f42653e6b4c8bf9e0f653bb11773263205fdd/RN50x4.pt",
@@ -54,6 +79,13 @@ clip_models_path = {
     "ViT-B/16": "https://openaipublic.azureedge.net/clip/models/5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f/ViT-B-16.pt",
     "ViT-L/14": "https://openaipublic.azureedge.net/clip/models/b8cca3fd41ae0c99ba7e8951adf17d267cdb84cd88be6f7c2e0eca1737a03836/ViT-L-14.pt",
     "ViT-L/14@336px": "https://openaipublic.azureedge.net/clip/models/3035c92b350959924f9f00213499208652fc7ea050643e8b385c2dac08641f02/ViT-L-14-336px.pt",
+}
+
+clip_models_output_dims = {
+    "ViT-B/32": 512,
+    "ViT-B/16": 512,
+    "ViT-L/14": 768,
+    "ViT-L/14@336px": 768,
 }
 
 class ConfigType:
@@ -137,11 +169,10 @@ class ConfigType:
 
     # model setting
     raw_embedding_size: int = 256
-    model_name: str = "swin_large_patch4_window12_384_in22k"  #"convnext"
-    clip_version: str = 'ViT-L/14@336px'
-    img_size: tuple = sizes[model_name]
-    clip_output_size: int = 768
-    output_size: int = 64
+    model_name: str = 'ViT-L/14@336px'
+    model_type: str = get_model_type(model_name)
+    img_size: tuple = input_img_sizes[model_name]
+    final_output_size: int = 64
     # ArcFace Hyperparameters
     s: float = 30.0
     m: float = 0.30
