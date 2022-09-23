@@ -22,7 +22,7 @@ from config import ConfigType
 from sklearn.model_selection import StratifiedKFold
 from dataset import GUIEDataset, alb_transforms
 from loss import cross_entropy_loss
-from model import GUIEModel
+from model import GUIEModel, CLIPModel
 from preprocess import preprocess_main
 from utils import init_for_distributed, setup_for_distributed
 
@@ -164,7 +164,7 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
     # model
     n_cls = len(df["label_id"].unique())
     print(f"Creating GUIEModel for {n_cls} classes") # sanity check
-    model = GUIEModel(opts, n_cls)
+    model = CLIPModel(opts, n_cls)
     model = model.cuda(local_gpu_id)
     if opts.load_from is not None:
         ckpt_data = torch.load(opts.load_from, map_location=next(model.parameters()).device)
