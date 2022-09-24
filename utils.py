@@ -12,6 +12,7 @@ import hashlib
 import urllib
 import warnings
 
+import clip.clip as clip
 from tqdm import tqdm
 
 
@@ -124,8 +125,11 @@ def model_download(url: str, root: str):
 
 
 def load_clip_backbone(opts: ConfigType):
-    model_path = model_download(clip_models_url[opts.model_name], os.path.expanduser("~/.cache/clip"))
-    with open(model_path, 'rb') as opened_file:
-        clip_vit = torch.jit.load(opened_file, map_location="cuda:0").visual.eval()
+    # model_path = model_download(clip_models[opts.clip_version], os.path.expanduser("~/.cache/clip"))
+    # with open(model_path, 'rb') as opened_file:
+        # clip_vit = torch.jit.load(opened_file, map_location="cuda:0").visual.eval()
+    model, preprocess = clip.load(opts.clip_version, jit=False)
+    clip_vit = model.visual.eval()
+
     return clip_vit
 
