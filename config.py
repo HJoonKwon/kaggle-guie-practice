@@ -1,4 +1,6 @@
 from typing import List, Optional
+from preprocessing.data_config import DataConfigType
+import os
 
 sizes = {
     # EfficientNet
@@ -40,6 +42,7 @@ sizes = {
     'swin_large_patch4_window12_384_in22k': (384, 384),
 }
 
+DATA_COMMON = "/data1/dukim/kaggle/"
 num_classes = {
     'Images130k': 11,
     'Imagenet1k': 1000,
@@ -86,14 +89,58 @@ class ConfigType:
     start_epoch: int = 0
     epoch: int = 5
 
-    # dataset selection
-    # 1. Images130k
-    # 2. Imagenet1k
-    # 3. Google-Landmark-2021
-    data_name: str = 'Images130k'
+    # dataset configuration
+    # List of availabel data_name is in preprocessing.data_config
+    data_config: List[DataConfigType] = [
+        DataConfigType(**{
+            "data_name": "Bonn-Furniture-Styles-Dataset",
+            "data_dir": os.path.join(DATA_COMMON, "Bonn_Furniture_Styles_Dataset"),
+            "label_column": "supercategory"
+        }),
+        DataConfigType(**{
+            "data_name": "Furniture-Images",
+            "data_dir": os.path.join(DATA_COMMON, "furniture-images-dataset"),
+            "label_column": "supercategory"
+        }),
+        DataConfigType(**{
+            "data_name": "MET",
+            "data_dir": os.path.join(DATA_COMMON, "the-met-dataset"),
+            "label_column": "supercategory",
+            "downsample_rate": 2
+        }),
+        DataConfigType(**{
+            "data_name": "Images130k",
+            "data_dir": os.path.join(DATA_COMMON, "Images130k")
+        }),
+        DataConfigType(**{
+            "data_name": "Clothing-Dataset",
+            "data_dir": os.path.join(DATA_COMMON, "clothing-dataset-full"),
+            "label_column": "supercategory"
+        }),
+        DataConfigType(**{
+            "data_name": "HnM-Fashion-Dataset",
+            "data_dir": os.path.join(DATA_COMMON, "h-and-m-personalized-fashion-recommendations"),
+            "label_column": "supercategory"
+        }),
+        DataConfigType(**{
+            "data_name": "Product10k",
+            "data_dir": os.path.join(DATA_COMMON, "Product10k"),
+            "label_column": "supercategory"
+        }),
+        DataConfigType(**{
+            "data_name": "Google-Landmark-2021",
+            "data_dir": os.path.join(DATA_COMMON, "landmark-retrieval-2021"),
+            "label_column": "supercategory",
+            "downsample_rate": 8
+        }),
+        DataConfigType(**{
+            "data_name": "iFood",
+            "data_dir": os.path.join(DATA_COMMON, "ifood"),
+            "label_column": "supercategory"
+        })
+    ]
 
     # model setting
-    num_classes: int = num_classes[data_name]
     embedding_size: int = 256
     model_name: str = "swin_large_patch4_window12_384_in22k"  #"convnext"
     img_size: tuple = sizes[model_name]
@@ -122,8 +169,8 @@ class ConfigType:
     # multi-gpu setting
     gpu_ids: List[str] = ["0", "1", "2", "3"]
     num_workers_per_gpu: int = 4
-    train_sample_per_gpu: int = 4
-    valid_sample_per_gpu: int = 4
+    train_sample_per_gpu: int = 16
+    valid_sample_per_gpu: int = 16
     rank: int = 0
     port: int = 2022
 

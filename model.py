@@ -116,7 +116,7 @@ class ArcMarginProductSubcenter(nn.Module):
 
 
 class GUIEModel(nn.Module):
-    def __init__(self, opts):
+    def __init__(self, opts, n_cls):
         super(GUIEModel, self).__init__()
         self.backbone = timm.create_model(opts.model_name,
                                           pretrained=True,
@@ -133,7 +133,7 @@ class GUIEModel(nn.Module):
             nn.SyncBatchNorm(num_features=opts.embedding_size),
         )
         self.fc = ArcMarginProduct(num_in_feats=opts.embedding_size,
-                                   num_out_feats=opts.num_classes,
+                                   num_out_feats=n_cls,
                                    s=opts.s,
                                    m=opts.m,
                                    easy_margin=opts.easy_margin,
@@ -144,9 +144,14 @@ class GUIEModel(nn.Module):
         valid_state_dict = deepcopy(model_state_dict)
         # if the dimension of head (number of classes) does not match,
         # do not load head
-        if model_state_dict["module.fc.weight"].shape != self.fc.weight.shape:
-            valid_state_dict["module.fc.weight"] = self.fc.weight
-            warnings.warn(f"fc parameters are not loaded.", UserWarning)
+        if 'module.fc.weight' in model_state_dict:
+            if model_state_dict["module.fc.weight"].shape != self.fc.weight.shape:
+                valid_state_dict["module.fc.weight"] = self.fc.weight
+                warnings.warn(f"fc parameters are not loaded.", UserWarning) 
+        elif 'fc.weight' in model_state_dict:
+            if model_state_dict["fc.weight"].shape != self.fc.weight.shape:
+                valid_state_dict["fc.weight"] = self.fc.weight
+                warnings.warn(f"fc parameters are not loaded.", UserWarning)
         # remove "module." in front of the keys
         valid_state_dict = OrderedDict(
             (k[7:], v) if k.startswith("module") else (k, v) \
@@ -174,7 +179,7 @@ class GUIEModel(nn.Module):
 
 
 class CLIPModel(nn.Module):
-    def __init__(self, opts):
+    def __init__(self, opts, n_cls):
         super(CLIPModel, self).__init__()
         self.clip_norm = nn.Sequential(
             transforms.Resize(size=[336, 336]),
@@ -186,18 +191,32 @@ class CLIPModel(nn.Module):
         # freeze backbone model parameters
         for param in self.backbone.parameters():
             param.requires_grad = False
-        # in_features = self.backbone.num_features
         self.dense = nn.Linear(in_features=opts.clip_output_size,
                                 out_features=opts.raw_embedding_size,
                                 dtype = torch.float16)
         self.dropout = nn.Dropout(p=0.2)
         self.fc = ArcMarginProduct(num_in_feats=opts.raw_embedding_size,
-                                   num_out_feats=opts.num_classes,
+                                   num_out_feats=n_cls,
                                    s=opts.s_clip,
                                    m=opts.m_clip,
                                    easy_margin=opts.easy_margin,
                                    ls_eps=opts.ls_eps_clip)
         self.avg = nn.AdaptiveAvgPool1d(opts.output_size)
+
+    # call this function before wrapping with DDP
+    def load_model(self, model_state_dict):
+        valid_state_dict = deepcopy(model_state_dict)
+        # if the dimension of head (number of classes) does not match,
+        # do not load head
+        if model_state_dict["module.fc.weight"].shape != self.fc.weight.shape:
+            valid_state_dict["module.fc.weight"] = self.fc.weight
+            warnings.warn(f"fc parameters are not loaded.", UserWarning)
+        # remove "module." in front of the keys
+        valid_state_dict = OrderedDict(
+            (k[7:], v) if k.startswith("module") else (k, v) \
+                for k, v in valid_state_dict.items()
+        )
+        self.load_state_dict(valid_state_dict)
 
     def forward(self, images, labels):
         x1                      = self.clip_norm(images / 255.0)

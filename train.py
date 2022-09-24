@@ -82,14 +82,11 @@ def create_folds(df: pd.DataFrame) -> pd.DataFrame:
     df['kfold'] = -1
     for fold_id, (train_idx, valid_idx) in enumerate(skf.split(**skf_kwargs)):
         df.loc[valid_idx, "kfold"] = fold_id
-
-    # classes = sorted(df['label_id'].unique())
-    # label_mapping = dict(zip(classes, list(range(len(classes)))))
     return df
 
 
-def generate_df() -> pd.DataFrame:
-    df = preprocess_main()
+def generate_df(opt: ConfigType) -> pd.DataFrame:
+    df = preprocess_main(opt)
     df = create_folds(df)
     return df
 
@@ -116,9 +113,18 @@ def get_scheduler(
 
 
 def get_dataloaders(df: pd.DataFrame, alb_transforms: dict, opts: ConfigType):
+    # split into train/val
     fold = opts.fold
     df_train = df[df.kfold != fold].reset_index(drop=True)
     df_valid = df[df.kfold == fold].reset_index(drop=True)
+    # if there is a remainder in train dataset,
+    # drop the record whose label is the most frequently appeared
+    # to prevent ValueError of BatchNorm, which requires more than two samples per batch
+    if len(df_train) % opts.train_sample_per_gpu:
+        rm_idx = df_train[df_train.label == df_train.label.value_counts().idxmax()].index[-1]
+        df_train.drop(rm_idx, axis=0, inplace=True)
+        df_train = df_train.reset_index(drop=True)
+    # build dataset, sampler and loader
     train_dataset = GUIEDataset(df_train, transforms=alb_transforms["train"])
     valid_dataset = GUIEDataset(df_valid, transforms=alb_transforms["valid"])
 
@@ -156,13 +162,15 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
     valid_loader, _ = loaders_dict["valid"]
 
     # model
-    # model = GUIEModel(opts)
+    n_cls = len(df["label_id"].unique())
+    print(f"Creating GUIEModel for {n_cls} classes") # sanity check
+    # model = GUIEModel(opts, n_cls)
     model = CLIPModel(opts)
-    model = model.cuda(local_gpu_id)
     if opts.load_from is not None:
         ckpt_data = torch.load(opts.load_from, map_location=next(model.parameters()).device)
         model.load_model(ckpt_data['model_state_dict'])
         print(f"load model from {opts.load_from} is completed")
+    model = model.cuda(local_gpu_id)
     model = DDP(module=model, device_ids=[local_gpu_id])
 
     # watch gradients for rank0
@@ -201,6 +209,8 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
 
             # retreive lr
             lr = optimizer.param_groups[0]['lr']
+            if scheduler:
+                scheduler.step()
 
             # time
             toc = time.time()
@@ -208,7 +218,7 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
             # visualization
             bar.set_description(
                 f"Epoch [{epoch}/{opts.epoch}], Loss: {loss.item():.4f}, "
-                f"LR: {lr:.5f}, Time: {toc-tic:.2f}")
+                f"LR: {lr}, Time: {toc-tic:.2f}")
             if (step % opts.vis_step == 0
                     or step == len(train_loader) - 1) and opts.rank == 0:
                 if do_log:
@@ -297,8 +307,6 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
 
             print(f"top-1 percentage: {accuracy_top1*100:.3f}%")
             print(f"top-5 percentage: {accuracy_top5*100:.3f}%")
-            if scheduler:
-                scheduler.step()
     return 0
 
 
@@ -360,12 +368,16 @@ if __name__ == "__main__":
 
     # read user config
     config = ConfigType()
+    # TODO: export and import config
+    # TODO: create new checkpoint directory based on current time and date 
+    #       whenever the train starts
 
     # set wandb run
     run = setup_run(config)
 
     # generate dataframe with preprocessing
-    df = generate_df()
+    df = generate_df(config)
+    # TODO: show data statistics
 
     # multiprocessing for multi-gpu training
     mp.spawn(main_worker,
