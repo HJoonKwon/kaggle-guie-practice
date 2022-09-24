@@ -163,9 +163,10 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
 
     # model
     n_cls = len(df["label_id"].unique())
-    print(f"Creating GUIEModel for {n_cls} classes") # sanity check
+    # print(f"Creating GUIEModel for {n_cls} classes") # sanity check
     # model = GUIEModel(opts, n_cls)
-    model = CLIPModel(opts)
+    print(f"Creating CLIPModel for {n_cls} classes") # sanity check
+    model = CLIPModel(opts, n_cls)
     if opts.load_from is not None:
         ckpt_data = torch.load(opts.load_from, map_location=next(model.parameters()).device)
         model.load_model(ckpt_data['model_state_dict'])
