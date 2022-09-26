@@ -120,50 +120,18 @@ class ConfigType:
     # List of availabel data_name is in preprocessing.data_config
     data_config: List[DataConfigType] = [
         DataConfigType(**{
-            "data_name": "Bonn-Furniture-Styles-Dataset",
-            "data_dir": os.path.join(DATA_COMMON, "Bonn_Furniture_Styles_Dataset"),
-            "label_column": "supercategory"
-        }),
-        DataConfigType(**{
-            "data_name": "Furniture-Images",
-            "data_dir": os.path.join(DATA_COMMON, "furniture-images-dataset"),
-            "label_column": "supercategory"
-        }),
-        DataConfigType(**{
-            "data_name": "MET",
-            "data_dir": os.path.join(DATA_COMMON, "the-met-dataset"),
-            "label_column": "supercategory",
-            "downsample_rate": 2
-        }),
-        DataConfigType(**{
-            "data_name": "Images130k",
-            "data_dir": os.path.join(DATA_COMMON, "Images130k")
-        }),
-        DataConfigType(**{
-            "data_name": "Clothing-Dataset",
-            "data_dir": os.path.join(DATA_COMMON, "clothing-dataset-full"),
-            "label_column": "supercategory"
-        }),
-        DataConfigType(**{
-            "data_name": "HnM-Fashion-Dataset",
-            "data_dir": os.path.join(DATA_COMMON, "h-and-m-personalized-fashion-recommendations"),
-            "label_column": "supercategory"
-        }),
-        DataConfigType(**{
             "data_name": "Product10k",
             "data_dir": os.path.join(DATA_COMMON, "Product10k"),
-            "label_column": "supercategory"
+            "downsample_rate": 4
         }),
         DataConfigType(**{
             "data_name": "Google-Landmark-2021",
             "data_dir": os.path.join(DATA_COMMON, "landmark-retrieval-2021"),
-            "label_column": "supercategory",
-            "downsample_rate": 8
+            "downsample_rate": 16,
         }),
         DataConfigType(**{
-            "data_name": "iFood",
-            "data_dir": os.path.join(DATA_COMMON, "ifood"),
-            "label_column": "supercategory"
+            "data_name": "Imagenet1k",
+            "data_dir": os.path.join(DATA_COMMON, "Imagenet1k"),
         })
     ]
 
@@ -181,7 +149,7 @@ class ConfigType:
 
     # directories
     save_path: str = '/media/volume4/130k-512x512-guie/ckpts'
-    save_file_name: str = f'{model_name}_images130k'
+    save_file_name: str = '{}_samdeajang'.format(model_name.replace('/', '-').replace('@', '-'))
 
     # multi-gpu setting
     gpu_ids: List[str] = ["0", "1", "2", "3"]
