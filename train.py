@@ -222,8 +222,8 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
 
             # visualization
             bar.set_description(
-                f"Epoch [{epoch}/{opts.epoch}], Loss: {loss.item():.4f}, "
-                f"LR: {lr}, Time: {toc-tic:.2f}")
+                f"Epoch [{epoch + 1}/{opts.epoch}], Loss: {loss.item():.4f}, "
+                f"LR: {lr:.3e}, Time: {toc-tic:.2f}")
             if (step % opts.vis_step == 0
                     or step == len(train_loader) - 1) and opts.rank == 0:
                 if do_log:
