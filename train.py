@@ -22,7 +22,7 @@ from config import ConfigType
 from sklearn.model_selection import StratifiedKFold
 from dataset import GUIEDataset, alb_transforms
 from loss import cross_entropy_loss
-from model import GUIEModel
+from model import GUIEModel, CLIPModel
 from preprocess import preprocess_main
 from utils import init_for_distributed, setup_for_distributed
 
@@ -161,10 +161,16 @@ def main_worker(rank, df: pd.DataFrame, opts: ConfigType, run):
     train_loader, train_sampler = loaders_dict["train"]
     valid_loader, _ = loaders_dict["valid"]
 
-    # model
+    # model creation and loading
     n_cls = len(df["label_id"].unique())
-    print(f"Creating GUIEModel for {n_cls} classes") # sanity check
-    model = GUIEModel(opts, n_cls)
+    if "clip" in opts.model_type.lower():
+        print(f"Creating CLIPModel for {n_cls} classes") # sanity check
+        model = CLIPModel(opts, n_cls)
+    elif "swin" in opts.model_type.lower():
+        print(f"Creating GUIEModel for {n_cls} classes") # sanity check
+        model = GUIEModel(opts, n_cls)
+    else:
+        raise ValueError(f"{opts.model_type} is not supported")
     model = model.cuda(local_gpu_id)
     if opts.load_from is not None:
         ckpt_data = torch.load(opts.load_from, map_location=next(model.parameters()).device)
