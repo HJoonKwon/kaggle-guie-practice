@@ -194,19 +194,15 @@ class CLIPModel(nn.Module):
         self.avg = nn.AdaptiveAvgPool1d(opts.final_output_size)
 
     def forward(self, images, labels):
-        x1                      = self.clip_norm(images / 255.0)
-        features                = self.backbone(x1.half())
+        features                = self.backbone(images.half())
         pooled_features         = self.dropout(features)
         embedding_dense         = self.dense(pooled_features)
         embedding               = self.fc(embedding_dense.float(), labels)
-        output                  = F.softmax(embedding, dim=1)
-        return output
+        return embedding
 
     def extract(self, images):
-        x1                      = self.clip_norm(images / 255.0)
-        features                = self.backbone(x1.half())
+        features                = self.backbone(images.half())
         pooled_features         = self.dropout(features)
         embedding_dense         = self.dense(pooled_features)
-        embedding_normalized    = F.normalize(embedding_dense, p=2.0)
-        embedding               = self.avg(embedding_normalized)
+        embedding               = self.avg(embedding_dense)
         return embedding
