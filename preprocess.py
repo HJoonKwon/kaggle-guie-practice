@@ -18,7 +18,7 @@ from preprocessing.furniture_images import preprocess_furniture_images
 from preprocessing.bonn_furniture import preprocess_BonnFurniture
 
 
-def get_dataframe_from_single_dataset(opt: DataConfigType) ->pd.DataFrame:
+def get_dataframe_from_single_dataset(opt: DataConfigType) -> pd.DataFrame:
     data_name = opt["data_name"]
     print(f"Processing {data_name} started")
     if data_name.lower() == "images130k":
@@ -44,6 +44,14 @@ def get_dataframe_from_single_dataset(opt: DataConfigType) ->pd.DataFrame:
     else:
         raise ValueError(f"dataset {data_name} is not supported")
 
+def downsample_dataset(df: pd.DataFrame, opt: DataConfigType) -> pd.DataFrame:
+    if opt["downsample_rate"] > 1:
+        skf_kwargs = {'X': df, 'y': df["label"]}
+        skf = StratifiedKFold(n_splits=opt["downsample_rate"], shuffle=False)
+        _, sampled_idx = next(iter(skf.split(**skf_kwargs)))
+        df = df.iloc[sampled_idx]
+        df.reset_index(drop=True, inplace=True)
+    return df
 
 def preprocess_main(config: ConfigType) -> pd.DataFrame:
     # check whether the directories are valid
@@ -61,12 +69,7 @@ def preprocess_main(config: ConfigType) -> pd.DataFrame:
         # change label_column to "label"
         df.rename({opt["label_column"]: "label"}, axis=1, inplace=True)
         # do downsampling
-        if opt["downsample_rate"] > 1:
-            skf_kwargs = {'X': df, 'y': df["label"]}
-            skf = StratifiedKFold(n_splits=opt["downsample_rate"], shuffle=False)
-            _, sampled_idx = next(iter(skf.split(**skf_kwargs)))
-            df = df.iloc[sampled_idx]
-            df.reset_index(drop=True, inplace=True)
+        df = downsample_dataset(df, opt)
         # and merge
         df_merged = pd.concat([df_merged, df])
     df_merged.reset_index(drop=True, inplace=True)
