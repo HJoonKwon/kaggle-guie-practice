@@ -3,7 +3,6 @@ import json
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 import pandas as pd
-from tqdm import tqdm
 from config import ConfigType
 
 from preprocessing.data_config import DataConfigType
@@ -80,7 +79,7 @@ def preprocess_main(config: ConfigType) -> pd.DataFrame:
     # save class mapping to the ckpt directory
     label_mappings = {}
     label_inv_mappings = {}
-    for label_id, label in tqdm(enumerate(encoder.classes_), ncols=100, desc="creating label mapping"):
+    for label_id, label in enumerate(encoder.classes_):
         label_mappings[label] = label_id
         label_inv_mappings[label_id] = label
 
