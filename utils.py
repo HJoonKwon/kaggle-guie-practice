@@ -3,11 +3,10 @@ Mostly copy-paste from torchvision references or other public repos like DETR:
 https://github.com/facebookresearch/detr/blob/master/util/misc.py
 """
 
-from xmlrpc.client import Boolean
 import torch.distributed as dist
 import torch
 import os
-from config import ConfigType, clip_models_url
+from config import ConfigType
 import hashlib
 import urllib
 import warnings
