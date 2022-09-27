@@ -10,6 +10,7 @@ class DataConfigType:
     # 8. MET
     # 9. Furniture-Images
     # 10. Bonn-Furniture-Styles-Dataset
+    # 11. Stanford-Cars
     data_name: str
     data_dir: str # root path to the data directory
     label_column: str # which column to use as labels (default is 'label')

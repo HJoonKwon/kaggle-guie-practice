@@ -16,6 +16,7 @@ from preprocessing.ifood import preprocess_ifood
 from preprocessing.met import preprocess_MET
 from preprocessing.furniture_images import preprocess_furniture_images
 from preprocessing.bonn_furniture import preprocess_BonnFurniture
+from preprocessing.stanford_car import preprocess_StanfordCar
 
 
 def get_dataframe_from_single_dataset(opt: DataConfigType) -> pd.DataFrame:
@@ -41,6 +42,8 @@ def get_dataframe_from_single_dataset(opt: DataConfigType) -> pd.DataFrame:
         return preprocess_furniture_images(opt)
     elif data_name.lower() == "bonn-furniture-styles-dataset":
         return preprocess_BonnFurniture(opt)
+    elif data_name.lower() == "stanford-cars":
+        return preprocess_StanfordCar(opt)
     else:
         raise ValueError(f"dataset {data_name} is not supported")
 
