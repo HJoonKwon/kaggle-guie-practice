@@ -3,6 +3,7 @@ import json
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 import pandas as pd
+from tqdm import tqdm
 from config import ConfigType
 
 from preprocessing.data_config import DataConfigType
@@ -49,12 +50,18 @@ def get_dataframe_from_single_dataset(opt: DataConfigType) -> pd.DataFrame:
 
 def downsample_dataset(df: pd.DataFrame, opt: DataConfigType) -> pd.DataFrame:
     if opt["downsample_rate"] > 1:
-        skf_kwargs = {'X': df, 'y': df["label"]}
-        skf = StratifiedKFold(n_splits=opt["downsample_rate"], shuffle=False)
-        _, sampled_idx = next(iter(skf.split(**skf_kwargs)))
-        df = df.iloc[sampled_idx]
-        df.reset_index(drop=True, inplace=True)
-    return df
+        label_count = df.groupby("label").count().rename({"file_path": "counts"}, axis=1)
+        labels_all = label_count.index.to_list()
+        downsampled_df = pd.DataFrame(columns=df.columns)
+        for label in tqdm(labels_all, ncols=100, desc=f"downsampling {opt.data_name}"):
+            n_labels = label_count.loc[label].counts
+            n_ds = max(1, round(n_labels / opt["downsample_rate"]))
+            sampled_recs = df[df["label"] == label].sample(n=n_ds)
+            downsampled_df = pd.concat([downsampled_df, sampled_recs])
+        downsampled_df.reset_index(drop=True, inplace=True)
+        return downsampled_df
+    else:
+        return df
 
 def preprocess_main(config: ConfigType) -> pd.DataFrame:
     # check whether the directories are valid
